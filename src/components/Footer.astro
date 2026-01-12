@@ -3,8 +3,7 @@ const currentYear = new Date().getFullYear();
 
 const quickLinks = [
   { href: '/', label: 'Home' },
-  { href: '/services', label: 'Services' },
-  { href: '/work', label: 'Work' },
+  { href: '/#services', label: 'Services' },
   { href: '/about', label: 'About' },
 ];
 
@@ -19,12 +18,12 @@ const resourceLinks = [
     <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
       <!-- Brand -->
       <div class="sm:col-span-2 lg:col-span-1">
-        <a href="/" class="flex items-center gap-2 text-xl font-bold text-white">
-          <svg class="h-8 w-8" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="32" height="32" rx="6" fill="#14b8a6"/>
-            <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" fill="white" font-family="system-ui" font-weight="bold" font-size="16">F</text>
-          </svg>
-          Franzke
+        <a href="/" class="flex items-center gap-2 text-xl font-bold">
+          <span class="logo-glow-container relative">
+            <span class="logo-glow"></span>
+            <img src="/logo3.png" alt="Franzke Technologies logo" class="relative h-8 w-8 logo-white" />
+          </span>
+          <span class="bg-gradient-to-r from-teal-500 to-white bg-clip-text text-transparent">Franzke Technologies</span>
         </a>
         <p class="mt-4 text-sm text-slate-400">
           20 years of architecture experience, accelerated by AI.

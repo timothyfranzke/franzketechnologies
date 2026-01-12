@@ -7,8 +7,8 @@ const { variant = 'light' } = Astro.props;
 
 const navLinks = [
   { href: '/', label: 'Home' },
-  { href: '/services', label: 'Services' },
-  { href: '/work', label: 'Work' },
+  { href: '/#services', label: 'Services' },
+  // { href: '/work', label: 'Work' },
   { href: '/about', label: 'About' },
   { href: '/blog', label: 'Blog' },
 ];
@@ -27,7 +27,7 @@ const isDark = variant === 'dark';
       <span class="flex items-center gap-2">
         <span class="logo-glow-container relative">
           <span class="logo-glow"></span>
-          <img src="/logo3.png" alt="Franzke Technologies logo" class="relative h-10 w-10" />
+          <img src="/logo3.png" alt="Franzke Technologies logo" class="relative h-10 w-10 logo-white" />
         </span>
         <span class="bg-gradient-to-r from-teal-500 to-white bg-clip-text text-transparent">Franzke Technologies</span>
       </span>
@@ -55,15 +55,10 @@ const isDark = variant === 'dark';
     <!-- CTA Button -->
     <div class="hidden md:block">
       <a
-        href="/contact"
-        class:list={[
-          'rounded-full px-5 py-2.5 text-base font-medium transition-all',
-          isDark
-            ? 'border border-navy-600 bg-navy-800 text-white hover:bg-navy-700'
-            : 'bg-navy-900 text-white hover:bg-navy-800'
-        ]}
+        href="/#contact"
+        class="rounded-full border-2 border-electric-500 bg-transparent px-5 py-2.5 text-base font-medium text-white transition-all hover:bg-electric-500"
       >
-        Get started
+        Get in touch
       </a>
     </div>
 
@@ -103,10 +98,10 @@ const isDark = variant === 'dark';
       ))}
       <li class="pt-2">
         <a
-          href="/contact"
-          class="block rounded-full bg-teal-500 px-4 py-2 text-center text-base font-medium text-white hover:bg-teal-600"
+          href="/#contact"
+          class="block rounded-full border-2 border-electric-500 bg-transparent px-4 py-2 text-center text-base font-medium text-white transition-all hover:bg-electric-500"
         >
-          Get started
+          Get in touch
         </a>
       </li>
     </ul>

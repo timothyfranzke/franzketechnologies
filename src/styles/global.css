@@ -67,29 +67,26 @@ h1, h2, h3, h4, h5, h6 {
   border-bottom: 1px solid #e2e8f0;
 }
 
-/* Logo glow animation */
+/* Logo container with subtle glow background */
 .logo-glow-container {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  padding: 6px;
+  border-radius: 12px;
+  background: rgba(0, 212, 255, 0.4);
+  box-shadow:
+    0 0 18px rgba(0, 212, 255, 0.4),
+    inset 0 0 12px rgba(0, 212, 255, 0.2);
 }
 
 .logo-glow {
-  position: absolute;
-  inset: -6px;
-  background: radial-gradient(ellipse 60% 40% at 50% 20%, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.15) 40%, transparent 70%);
-  border-radius: 50%;
-  filter: blur(6px);
-  animation: glow-rotate 6s linear infinite;
+  display: none;
 }
 
-@keyframes glow-rotate {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+.logo-white {
+  filter: brightness(0) invert(1);
 }
 
 /* Hero section with continuous background and parallax */
