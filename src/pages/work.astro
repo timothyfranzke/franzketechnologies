@@ -1,0 +1,125 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+
+const projects = {
+  enterprise: [
+    {
+      title: 'NBA TopShots',
+      description: 'Consulted on Kafka cluster optimization to scale their NFT platform during peak demand.',
+      category: 'Enterprise',
+    },
+    {
+      title: 'NGA (National Geospatial-Intelligence Agency)',
+      description: 'Built internal Node.js dashboards for data visualization and operational monitoring.',
+      category: 'Government',
+    },
+    {
+      title: 'MyRetailBuddy',
+      description: 'Designed and built distributed IoT architecture for gas meter reading systems using AWS IoT Core.',
+      category: 'IoT',
+    },
+  ],
+  saas: [
+    {
+      title: 'Kindercosmos',
+      description: 'Built and operated a daycare management platform from 2019-2023. Full-stack development, infrastructure, and customer support.',
+      category: 'SaaS',
+    },
+  ],
+  web: [
+    {
+      title: 'hoorfarlaw.com',
+      description: 'Professional website for a law firm. Clean, fast, and easy to maintain.',
+      category: 'Web',
+      url: 'https://hoorfarlaw.com',
+    },
+    {
+      title: 'kc360gym.com',
+      description: 'Website for KC360 Gymnastics, a gymnastics facility I own with my family.',
+      category: 'Web',
+      url: 'https://kc360gym.com',
+    },
+    {
+      title: 'pathwaymicroschool.com',
+      description: 'Website for Pathway Microschool, a local education institution.',
+      category: 'Web',
+      url: 'https://pathwaymicroschool.com',
+    },
+    {
+      title: 'just4215.com',
+      description: 'Ecommerce platform for Just4215 basketball program.',
+      category: 'Ecommerce',
+      url: 'https://just4215.com',
+    },
+    {
+      title: 'EEclipse',
+      description: 'Ecommerce platform for a youth basketball program.',
+      category: 'Ecommerce',
+    },
+  ],
+};
+---
+
+<BaseLayout title="Work" description="Portfolio of past projects spanning enterprise systems, SaaS platforms, and web development.">
+  <section class="py-16 sm:py-20">
+    <div class="mx-auto max-w-5xl px-4 sm:px-6">
+      <h1 class="text-3xl font-bold text-slate-900 sm:text-4xl">Work</h1>
+      <p class="mt-4 text-lg text-slate-600">
+        A selection of projects I've worked on over the years.
+      </p>
+
+      <!-- Enterprise & Government -->
+      <div class="mt-12">
+        <h2 class="text-xl font-semibold text-slate-900">Enterprise & Government</h2>
+        <div class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {projects.enterprise.map((project) => (
+            <ProjectCard
+              title={project.title}
+              description={project.description}
+              category={project.category}
+            />
+          ))}
+        </div>
+      </div>
+
+      <!-- SaaS & Platforms -->
+      <div class="mt-12">
+        <h2 class="text-xl font-semibold text-slate-900">SaaS & Platforms</h2>
+        <div class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {projects.saas.map((project) => (
+            <ProjectCard
+              title={project.title}
+              description={project.description}
+              category={project.category}
+            />
+          ))}
+        </div>
+      </div>
+
+      <!-- Web & Ecommerce -->
+      <div class="mt-12">
+        <h2 class="text-xl font-semibold text-slate-900">Web & Ecommerce</h2>
+        <div class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {projects.web.map((project) => (
+            <ProjectCard
+              title={project.title}
+              description={project.description}
+              category={project.category}
+              url={project.url}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div class="mt-16 border-t border-slate-200 pt-8">
+        <p class="text-slate-600">
+          Have a project in mind?{' '}
+          <a href="/contact" class="font-medium text-accent-600 hover:text-accent-700">
+            Let's talk about it
+          </a>
+        </p>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

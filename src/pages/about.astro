@@ -1,0 +1,75 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="About" description="Learn about Timothy Franzke - 20+ years of software architecture experience, now accelerated by AI.">
+  <section class="py-16 sm:py-20">
+    <div class="mx-auto max-w-3xl px-4 sm:px-6">
+      <h1 class="text-3xl font-bold text-slate-900 sm:text-4xl">About me</h1>
+
+      <div class="mt-8 flex flex-col gap-8 sm:flex-row sm:gap-12">
+        <!-- Photo placeholder -->
+        <div class="flex-shrink-0">
+          <div class="h-48 w-48 rounded-lg bg-slate-200 sm:h-56 sm:w-56" aria-label="Photo of Timothy Franzke">
+            <span class="flex h-full items-center justify-center text-sm text-slate-500">
+              Photo
+            </span>
+          </div>
+        </div>
+
+        <div class="prose prose-slate max-w-none">
+          <p>
+            I'm a software architect with 20+ years of experience across enterprise systems, startups,
+            and everything in between. I've built IoT platforms, optimized Kafka clusters for NFT marketplaces,
+            shipped ecommerce sites, and run my own SaaS.
+          </p>
+          <p>
+            These days, I focus on AI-augmented development—using AI tools to accelerate what I've always done:
+            help teams build and deliver fast.
+          </p>
+        </div>
+      </div>
+
+      <div class="prose prose-slate mt-12 max-w-none">
+        <h2>My approach</h2>
+        <p>
+          I'm not an AI hype person. I've been building software long enough to know that the fundamentals
+          matter more than the buzzwords. Good architecture, clear requirements, and a focus on actually
+          shipping—those are the things that make projects succeed.
+        </p>
+        <p>
+          What AI gives me is speed. Tasks that used to take days now take hours. I can prototype faster,
+          explore more solutions, and iterate quickly. But the architectural rigor? That comes from two
+          decades of experience, not from a chat interface.
+        </p>
+        <p>
+          I use AI as a tool to move faster while maintaining the quality and thoughtfulness that comes
+          from years of doing this work. If you're looking for someone to slap AI on everything and call
+          it innovation, I'm not your guy. If you want someone who knows how to ship and can do it
+          faster with modern tools, let's talk.
+        </p>
+
+        <h2>Background</h2>
+        <p>
+          I'm based in the Kansas City area. Currently, I'm a Solutions Architect focused on AI solutions,
+          transitioning to full-time consulting. Over the years, I've worked with organizations ranging
+          from government agencies to startups, on projects from distributed IoT systems to consumer-facing
+          web platforms.
+        </p>
+        <p>
+          Outside of work, I run a gymnastics facility with my family and stay involved in youth basketball
+          programs in my community.
+        </p>
+      </div>
+
+      <div class="mt-12 border-t border-slate-200 pt-8">
+        <p class="text-slate-600">
+          Want to work together?{' '}
+          <a href="/contact" class="font-medium text-accent-600 hover:text-accent-700">
+            Get in touch
+          </a>
+        </p>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

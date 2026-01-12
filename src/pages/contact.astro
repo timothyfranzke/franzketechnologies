@@ -1,0 +1,67 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ContactForm from '../components/ContactForm.astro';
+---
+
+<BaseLayout title="Contact" description="Get in touch to discuss how I can help your team build and deliver faster.">
+  <section class="py-16 sm:py-20">
+    <div class="mx-auto max-w-3xl px-4 sm:px-6">
+      <h1 class="text-3xl font-bold text-slate-900 sm:text-4xl">Get in touch</h1>
+      <p class="mt-4 text-lg text-slate-600">
+        Have a project in mind or want to learn more about how I can help? I'd love to hear from you.
+      </p>
+
+      <div class="mt-12 grid gap-12 lg:grid-cols-2">
+        <!-- Contact Form -->
+        <div>
+          <h2 class="text-lg font-semibold text-slate-900">Send a message</h2>
+          <div class="mt-6">
+            <ContactForm />
+          </div>
+        </div>
+
+        <!-- Other Contact Options -->
+        <div>
+          <h2 class="text-lg font-semibold text-slate-900">Other ways to connect</h2>
+
+          <!-- Calendly Placeholder -->
+          <div class="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-6">
+            <h3 class="font-medium text-slate-900">Schedule a call</h3>
+            <p class="mt-2 text-sm text-slate-600">
+              Prefer to talk live? Book a time that works for you.
+            </p>
+            <!-- Calendly embed will go here -->
+            <div class="mt-4 rounded bg-slate-200 p-8 text-center text-sm text-slate-500">
+              Calendly embed placeholder
+            </div>
+          </div>
+
+          <!-- Direct Contact -->
+          <div class="mt-6 space-y-4">
+            <div>
+              <h3 class="font-medium text-slate-900">Email</h3>
+              <a
+                href="mailto:timothy@franzketechnologies.com"
+                class="mt-1 block text-accent-600 hover:text-accent-700"
+              >
+                timothy@franzketechnologies.com
+              </a>
+            </div>
+
+            <div>
+              <h3 class="font-medium text-slate-900">LinkedIn</h3>
+              <a
+                href="https://linkedin.com/in/timothyfranzke"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="mt-1 block text-accent-600 hover:text-accent-700"
+              >
+                linkedin.com/in/timothyfranzke
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

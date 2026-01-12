@@ -1,0 +1,29 @@
+---
+const currentYear = new Date().getFullYear();
+---
+
+<footer class="border-t border-slate-200 bg-slate-50">
+  <div class="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+    <div class="flex flex-col items-center justify-between gap-4 sm:flex-row">
+      <p class="text-sm text-slate-600">
+        &copy; {currentYear} Franzke Technologies. All rights reserved.
+      </p>
+      <div class="flex gap-6">
+        <a
+          href="https://linkedin.com/in/timothyfranzke"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-sm text-slate-600 hover:text-slate-900"
+        >
+          LinkedIn
+        </a>
+        <a
+          href="mailto:timothy@franzketechnologies.com"
+          class="text-sm text-slate-600 hover:text-slate-900"
+        >
+          Email
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>

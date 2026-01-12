@@ -1,0 +1,116 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ServiceCard from '../components/ServiceCard.astro';
+import BlogPostPreview from '../components/BlogPostPreview.astro';
+import { getCollection } from 'astro:content';
+
+const services = [
+  {
+    title: 'AI Strategy & Implementation',
+    description: 'Helping teams figure out where AI fits in their workflow and actually ship it. Not theoretical—practical implementation.',
+  },
+  {
+    title: 'Delivery Acceleration',
+    description: 'Fractional architect work. Helping teams build and deliver faster through better architecture decisions and AI-augmented workflows.',
+  },
+  {
+    title: 'Workshops & Training',
+    description: 'Teaching teams how to integrate AI into their development workflow. Focus on practical, hands-on learning.',
+  },
+  {
+    title: 'Web & Software Development',
+    description: 'Full-stack development for web applications, ecommerce platforms, and custom software. Modern stacks, fast delivery.',
+  },
+];
+
+const allPosts = await getCollection('blog');
+const recentPosts = allPosts
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 3);
+---
+
+<BaseLayout title="Home">
+  <!-- Hero -->
+  <section class="bg-slate-50 py-20 sm:py-28">
+    <div class="mx-auto max-w-5xl px-4 sm:px-6">
+      <h1 class="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+        20 years of architecture.<br />
+        <span class="text-accent-600">Accelerated by AI.</span>
+      </h1>
+      <p class="mt-6 max-w-2xl text-lg text-slate-600">
+        I've spent 20 years helping teams architect and deliver software. Now I use AI to do it faster.
+        Whether you need strategic guidance, hands-on development, or help getting your team up to speed—I can help.
+      </p>
+      <div class="mt-8 flex flex-wrap gap-4">
+        <a
+          href="/contact"
+          class="rounded-md bg-accent-600 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-accent-700"
+        >
+          Let's talk
+        </a>
+        <a
+          href="/services"
+          class="rounded-md border border-slate-300 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+        >
+          View services
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Services -->
+  <section class="py-16 sm:py-20">
+    <div class="mx-auto max-w-5xl px-4 sm:px-6">
+      <h2 class="text-2xl font-bold text-slate-900">What I do</h2>
+      <div class="mt-8 grid gap-6 sm:grid-cols-2">
+        {services.map((service) => (
+          <ServiceCard
+            title={service.title}
+            description={service.description}
+            href="/services"
+          />
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Recent Posts -->
+  {recentPosts.length > 0 && (
+    <section class="border-t border-slate-200 bg-slate-50 py-16 sm:py-20">
+      <div class="mx-auto max-w-5xl px-4 sm:px-6">
+        <div class="flex items-center justify-between">
+          <h2 class="text-2xl font-bold text-slate-900">Recent posts</h2>
+          <a href="/blog" class="text-sm font-medium text-accent-600 hover:text-accent-700">
+            View all &rarr;
+          </a>
+        </div>
+        <div class="mt-8">
+          {recentPosts.map((post) => (
+            <BlogPostPreview
+              title={post.data.title}
+              date={post.data.date}
+              description={post.data.description}
+              slug={post.slug}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- CTA -->
+  <section class="py-16 sm:py-20">
+    <div class="mx-auto max-w-5xl px-4 text-center sm:px-6">
+      <h2 class="text-2xl font-bold text-slate-900">Ready to move faster?</h2>
+      <p class="mt-4 text-slate-600">
+        Let's talk about how I can help your team build and deliver.
+      </p>
+      <a
+        href="/contact"
+        class="mt-6 inline-block rounded-md bg-accent-600 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-accent-700"
+      >
+        Get in touch
+      </a>
+    </div>
+  </section>
+</BaseLayout>

@@ -1,0 +1,89 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const services = [
+  {
+    title: 'AI Strategy & Implementation',
+    description: 'Helping teams figure out where AI fits in their workflow and actually ship it. Not theoretical—practical implementation.',
+    details: [
+      'Assess your current workflows for AI opportunities',
+      'Build proof-of-concepts to validate approaches',
+      'Implement production-ready AI features',
+      'Train your team to maintain and extend the work',
+    ],
+  },
+  {
+    title: 'Delivery Acceleration',
+    description: 'Fractional architect work. Helping teams build and deliver faster through better architecture decisions, process improvements, and AI-augmented workflows.',
+    details: [
+      'Architecture reviews and recommendations',
+      'Technical debt prioritization',
+      'Team process optimization',
+      'Hands-on implementation support',
+    ],
+  },
+  {
+    title: 'Workshops & Training',
+    description: 'Teaching teams how to integrate AI into their development workflow. Focus on practical, hands-on learning.',
+    details: [
+      'AI-assisted coding workflows',
+      'Prompt engineering for developers',
+      'Tool selection and integration',
+      'Custom curriculum for your stack',
+    ],
+  },
+  {
+    title: 'Web & Software Development',
+    description: 'Full-stack development for web applications, ecommerce platforms, and custom software. Modern stacks, fast delivery.',
+    details: [
+      'Web applications and APIs',
+      'Ecommerce platforms',
+      'Custom business software',
+      'MVP and prototype development',
+    ],
+  },
+];
+---
+
+<BaseLayout title="Services" description="AI strategy, delivery acceleration, workshops, and full-stack development services.">
+  <section class="py-16 sm:py-20">
+    <div class="mx-auto max-w-3xl px-4 sm:px-6">
+      <h1 class="text-3xl font-bold text-slate-900 sm:text-4xl">Services</h1>
+      <p class="mt-4 text-lg text-slate-600">
+        I help teams build and ship faster. Here's how.
+      </p>
+
+      <div class="mt-12 space-y-12">
+        {services.map((service, index) => (
+          <div class="border-b border-slate-200 pb-12 last:border-b-0">
+            <h2 class="text-2xl font-semibold text-slate-900">{service.title}</h2>
+            <p class="mt-3 text-slate-600">{service.description}</p>
+            <ul class="mt-6 space-y-2">
+              {service.details.map((detail) => (
+                <li class="flex items-start gap-3 text-slate-600">
+                  <svg class="mt-1 h-5 w-5 flex-shrink-0 text-accent-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  {detail}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      <div class="mt-12 rounded-lg bg-slate-50 p-8 text-center">
+        <h2 class="text-xl font-semibold text-slate-900">Not sure what you need?</h2>
+        <p class="mt-2 text-slate-600">
+          Let's have a conversation. I'll help you figure out the best path forward.
+        </p>
+        <a
+          href="/contact"
+          class="mt-6 inline-block rounded-md bg-accent-600 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-accent-700"
+        >
+          Get in touch
+        </a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
