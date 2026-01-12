@@ -1,94 +1,158 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
 ---
 
-<BaseLayout title="About" description="Learn about Timothy Franzke - 20+ years of software architecture experience, now accelerated by AI.">
-  <!-- Hero -->
-  <section class="bg-slate-50 py-16 sm:py-20">
-    <div class="mx-auto max-w-6xl px-4 sm:px-6">
-      <p class="section-label">About</p>
-      <h1 class="mt-4 text-3xl font-bold text-slate-900 sm:text-4xl">Meet Timothy</h1>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Learn about Timothy Franzke - 20+ years of software development experience, now accelerated by AI." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>About | Franzke Technologies</title>
+  </head>
+  <body class="flex min-h-screen flex-col bg-white text-slate-900">
+    <!-- Animated background shapes -->
+    <div class="bg-shapes-container">
+      <div class="bg-shape bg-shape-1"></div>
+      <div class="bg-shape bg-shape-2"></div>
+      <div class="bg-shape bg-shape-3"></div>
+      <div class="bg-shape bg-shape-4"></div>
     </div>
-  </section>
 
-  <section class="py-16 sm:py-20">
-    <div class="mx-auto max-w-6xl px-4 sm:px-6">
-      <div class="grid gap-12 lg:grid-cols-3">
-        <!-- Photo placeholder -->
-        <div class="lg:col-span-1">
-          <div class="aspect-square overflow-hidden rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50">
-            <div class="flex h-full items-center justify-center">
-              <div class="text-center">
-                <div class="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-navy-900">
-                  <span class="text-4xl font-bold text-teal-400">TF</span>
+    <div class="hero-section">
+      <Header variant="dark" />
+
+      <!-- Decorative elements -->
+      <div class="absolute right-0 top-1/4 h-64 w-64 rounded-full bg-electric-500/10 blur-3xl z-[1]"></div>
+      <div class="absolute left-1/4 top-1/2 h-48 w-48 rounded-full bg-purple-500/10 blur-3xl z-[1]"></div>
+
+      <!-- Hero -->
+      <section class="relative z-[2] py-16 sm:py-24">
+        <div class="mx-auto max-w-6xl px-4 sm:px-6">
+          <div class="animate-on-scroll slide-from-bottom text-center">
+            <p class="section-label">About</p>
+            <h1 class="mt-4 text-4xl font-bold text-white sm:text-5xl lg:text-6xl">Meet Timothy</h1>
+            <p class="mx-auto mt-6 max-w-2xl text-lg text-slate-300">
+              20+ years of software development experience, now accelerated by AI.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Bio Section -->
+      <section class="relative z-[2] py-16 sm:py-20">
+        <div class="mx-auto max-w-6xl px-4 sm:px-6">
+          <div class="grid gap-12 lg:grid-cols-3">
+            <!-- Photo placeholder -->
+            <div class="lg:col-span-1">
+              <div class="animate-on-scroll slide-from-left service-card rounded-2xl p-[2px]">
+                <div class="service-card-inner rounded-2xl bg-navy-900/80 backdrop-blur-sm aspect-square overflow-hidden">
+                  <div class="flex h-full items-center justify-center">
+                    <div class="text-center">
+                      <div class="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-electric-500 to-purple-500">
+                        <span class="text-4xl font-bold text-white">TF</span>
+                      </div>
+                      <p class="mt-4 text-sm text-slate-400">Photo coming soon</p>
+                    </div>
+                  </div>
                 </div>
-                <p class="mt-4 text-sm text-slate-500">Photo placeholder</p>
+              </div>
+            </div>
+
+            <!-- Bio -->
+            <div class="lg:col-span-2">
+              <div class="animate-on-scroll slide-from-right service-card rounded-2xl p-[2px]">
+                <div class="service-card-inner rounded-2xl bg-navy-900/80 backdrop-blur-sm p-8">
+                  <div class="prose prose-invert max-w-none prose-headings:text-white prose-headings:font-bold prose-p:text-slate-300 prose-a:text-electric-400 prose-a:no-underline hover:prose-a:underline">
+                    <p class="text-lg text-slate-300">
+                      I'm a software architect with 20+ years of experience across enterprise systems, startups,
+                      and everything in between. I've built IoT platforms, optimized Kafka clusters for NFT marketplaces,
+                      shipped ecommerce sites, and run my own SaaS.
+                    </p>
+                    <p class="text-slate-300">
+                      These days, I focus on AI-augmented development—using AI tools to accelerate what I've always done:
+                      help teams build and deliver fast.
+                    </p>
+
+                    <h2 class="text-2xl text-white mt-8 mb-4">My approach</h2>
+                    <p class="text-slate-300">
+                      I'm not an AI hype person. I've been building software long enough to know that the fundamentals
+                      matter more than the buzzwords. Good architecture, clear requirements, and a focus on actually
+                      shipping—those are the things that make projects succeed.
+                    </p>
+                    <p class="text-slate-300">
+                      What AI gives me is speed. Tasks that used to take days now take hours. I can prototype faster,
+                      explore more solutions, and iterate quickly. But the architectural rigor? That comes from two
+                      decades of experience, not from a chat interface.
+                    </p>
+                    <p class="text-slate-300">
+                      I use AI as a tool to move faster while maintaining the quality and thoughtfulness that comes
+                      from years of doing this work. If you're looking for someone to slap AI on everything and call
+                      it innovation, I'm not your guy. If you want someone who knows how to ship and can do it
+                      faster with modern tools, let's talk.
+                    </p>
+
+                    <h2 class="text-2xl text-white mt-8 mb-4">Background</h2>
+                    <p class="text-slate-300">
+                      I'm based in the Kansas City area. Currently, I'm a Solutions Architect focused on AI solutions,
+                      transitioning to full-time consulting. Over the years, I've worked with organizations ranging
+                      from government agencies to startups, on projects from distributed IoT systems to consumer-facing
+                      web platforms.
+                    </p>
+                    <p class="text-slate-300">
+                      Outside of work, I run a gymnastics facility with my family and stay involved in youth basketball
+                      programs in my community.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
+      </section>
 
-        <!-- Bio -->
-        <div class="lg:col-span-2">
-          <div class="prose prose-slate max-w-none prose-headings:text-slate-900 prose-a:text-teal-600 prose-a:no-underline hover:prose-a:underline">
-            <p class="text-lg">
-              I'm a software architect with 20+ years of experience across enterprise systems, startups,
-              and everything in between. I've built IoT platforms, optimized Kafka clusters for NFT marketplaces,
-              shipped ecommerce sites, and run my own SaaS.
+      <!-- CTA -->
+      <section class="relative z-[2] py-16 sm:py-20">
+        <div class="mx-auto max-w-6xl px-4 text-center sm:px-6">
+          <div class="animate-on-scroll slide-from-bottom">
+            <h2 class="text-3xl font-bold text-white sm:text-4xl">Want to work together?</h2>
+            <p class="mt-4 text-lg text-slate-300">
+              I'd love to hear about your project and see if I can help.
             </p>
-            <p>
-              These days, I focus on AI-augmented development—using AI tools to accelerate what I've always done:
-              help teams build and deliver fast.
-            </p>
-
-            <h2>My approach</h2>
-            <p>
-              I'm not an AI hype person. I've been building software long enough to know that the fundamentals
-              matter more than the buzzwords. Good architecture, clear requirements, and a focus on actually
-              shipping—those are the things that make projects succeed.
-            </p>
-            <p>
-              What AI gives me is speed. Tasks that used to take days now take hours. I can prototype faster,
-              explore more solutions, and iterate quickly. But the architectural rigor? That comes from two
-              decades of experience, not from a chat interface.
-            </p>
-            <p>
-              I use AI as a tool to move faster while maintaining the quality and thoughtfulness that comes
-              from years of doing this work. If you're looking for someone to slap AI on everything and call
-              it innovation, I'm not your guy. If you want someone who knows how to ship and can do it
-              faster with modern tools, let's talk.
-            </p>
-
-            <h2>Background</h2>
-            <p>
-              I'm based in the Kansas City area. Currently, I'm a Solutions Architect focused on AI solutions,
-              transitioning to full-time consulting. Over the years, I've worked with organizations ranging
-              from government agencies to startups, on projects from distributed IoT systems to consumer-facing
-              web platforms.
-            </p>
-            <p>
-              Outside of work, I run a gymnastics facility with my family and stay involved in youth basketball
-              programs in my community.
-            </p>
+            <a
+              href="/contact"
+              class="mt-8 inline-block rounded-full border-2 border-electric-500 bg-transparent px-8 py-3 text-base font-medium text-white transition-all hover:bg-electric-500"
+            >
+              Get in touch
+            </a>
           </div>
         </div>
-      </div>
+      </section>
     </div>
-  </section>
 
-  <!-- CTA -->
-  <section class="border-t border-slate-200 bg-slate-50 py-16 sm:py-20">
-    <div class="mx-auto max-w-6xl px-4 text-center sm:px-6">
-      <h2 class="text-2xl font-bold text-slate-900">Want to work together?</h2>
-      <p class="mt-4 text-slate-600">
-        I'd love to hear about your project and see if I can help.
-      </p>
-      <a
-        href="/contact"
-        class="mt-8 inline-block rounded-full bg-teal-500 px-8 py-3 text-sm font-medium text-white transition-all hover:bg-teal-600"
-      >
-        Get in touch
-      </a>
-    </div>
-  </section>
-</BaseLayout>
+    <Footer />
+
+    <script>
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+            }
+          });
+        },
+        {
+          threshold: 0.1,
+          rootMargin: '0px 0px -50px 0px',
+        }
+      );
+
+      document.querySelectorAll('.animate-on-scroll').forEach((el) => {
+        observer.observe(el);
+      });
+    </script>
+  </body>
+</html>

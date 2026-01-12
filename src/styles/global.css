@@ -1,26 +1,37 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
-/* Import Poppins from Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+/* Import Poppins and Bebas Neue from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@300;400;500;600;700&display=swap');
 
 @theme {
-  /* Navy/dark blue for hero and footer */
-  --color-navy-900: #0f172a;
-  --color-navy-800: #1e293b;
-  --color-navy-700: #334155;
-  --color-navy-600: #475569;
+  /* Deep navy for hero and footer */
+  --color-navy-900: #0a0a1f;
+  --color-navy-800: #12122e;
+  --color-navy-700: #1a1a4e;
+  --color-navy-600: #2d2d6e;
 
-  /* Teal accent for buttons and highlights */
-  --color-teal-400: #2dd4bf;
-  --color-teal-500: #14b8a6;
-  --color-teal-600: #0d9488;
+  /* Electric blue accent for buttons and highlights */
+  --color-electric-400: #5ee7ff;
+  --color-electric-500: #00d4ff;
+  --color-electric-600: #00a8cc;
+
+  /* Purple accent */
+  --color-purple-400: #a78bfa;
+  --color-purple-500: #8b5cf6;
+  --color-purple-600: #7c3aed;
+
+  /* Legacy teal mapped to electric blue */
+  --color-teal-400: #5ee7ff;
+  --color-teal-500: #00d4ff;
+  --color-teal-600: #00a8cc;
 
   /* Keep blue as secondary accent */
   --color-accent-500: #3b82f6;
   --color-accent-600: #2563eb;
 
   --font-family-sans: "Poppins", sans-serif;
+  --font-family-display: "Bebas Neue", sans-serif;
 }
 
 html {
@@ -35,35 +46,25 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Header diagonal split */
-.header-split {
-  position: relative;
-  overflow: hidden;
+/* Headings use Bebas Neue */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-display);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
-.header-split::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 38%;
-  height: 100%;
-  background: white;
-  clip-path: polygon(0 0, 100% 0, 85% 100%, 0 100%);
-  z-index: -1;
+/* Header styles */
+.header-split {
+  position: relative;
 }
 
 .header-split-dark {
-  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+  background: transparent;
 }
 
 .header-split-light {
   background: white;
   border-bottom: 1px solid #e2e8f0;
-}
-
-.header-split-light::before {
-  display: none;
 }
 
 /* Logo glow animation */
@@ -91,36 +92,73 @@ body {
   }
 }
 
-/* Hero diagonal split */
-.hero-diagonal {
+/* Hero section with continuous background and parallax */
+.hero-section {
+  background: linear-gradient(135deg, #0a0a1f 0%, #1a1a4e 40%, #2d1a4e 70%, #0a0a1f 100%);
   position: relative;
   overflow: hidden;
 }
 
-/* White background for the full hero */
-.hero-gradient-section {
+.hero-section::before {
+  content: '';
   position: absolute;
   inset: 0;
-  background: white;
-  z-index: 0;
-}
-
-/* Navy diagonal on the left - 80% width with matching slope */
-.hero-white-section {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
-  /* Adjusted to match header's visual angle (less steep for taller element) */
-  clip-path: polygon(0 0, 100% 0, 53% 100%, 0 100%);
+  background:
+    linear-gradient(135deg, #0a0a1f 0%, rgba(26, 26, 78, 0.9) 40%, rgba(45, 26, 78, 0.6) 55%, transparent 70%),
+    url('/bg_nodes.png');
+  background-size: auto, auto;
+  background-position: center, right top;
+  background-repeat: no-repeat, no-repeat;
+  opacity: 0.7;
   z-index: 0;
 }
 
 /* Legacy gradient class for other uses */
 .hero-gradient {
-  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+  background: linear-gradient(135deg, #0a0a1f 0%, #1a1a4e 40%, #2d1a4e 70%, #0a0a1f 100%);
+}
+
+/* Lightning text with background image */
+.hero-lightning-text {
+  background-image: url('/lightening.png');
+  background-size: cover;
+  background-position: center;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Metallic glow border for service cards */
+.service-card {
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 255, 255, 0.1) 0deg,
+    rgba(0, 212, 255, 0.6) 45deg,
+    rgba(255, 255, 255, 0.9) 90deg,
+    rgba(139, 92, 246, 0.5) 135deg,
+    rgba(255, 255, 255, 0.1) 180deg,
+    rgba(0, 212, 255, 0.4) 225deg,
+    rgba(255, 255, 255, 0.7) 270deg,
+    rgba(139, 92, 246, 0.6) 315deg,
+    rgba(255, 255, 255, 0.1) 360deg
+  );
+  position: relative;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow:
+    0 0 20px rgba(0, 212, 255, 0.2),
+    0 0 40px rgba(0, 212, 255, 0.1);
+}
+
+.service-card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 0 30px rgba(0, 212, 255, 0.4),
+    0 0 60px rgba(0, 212, 255, 0.2);
+}
+
+.service-card-inner {
+  height: 100%;
 }
 
 /* Section label style */
@@ -129,7 +167,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: #14b8a6;
+  color: #00d4ff;
 }
 
 /* Scroll animations */
@@ -188,7 +226,7 @@ body {
 .bg-shape-1 {
   width: 600px;
   height: 600px;
-  background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+  background: linear-gradient(135deg, #00d4ff 0%, #00a8cc 100%);
   top: -200px;
   right: -100px;
   animation: float-1 25s ease-in-out infinite;
@@ -197,7 +235,7 @@ body {
 .bg-shape-2 {
   width: 500px;
   height: 500px;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
   top: 40%;
   left: -150px;
   animation: float-2 30s ease-in-out infinite;
@@ -206,7 +244,7 @@ body {
 .bg-shape-3 {
   width: 400px;
   height: 400px;
-  background: linear-gradient(135deg, #14b8a6 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, #00d4ff 0%, #8b5cf6 100%);
   bottom: 10%;
   right: -100px;
   animation: float-3 20s ease-in-out infinite;
@@ -215,7 +253,7 @@ body {
 .bg-shape-4 {
   width: 300px;
   height: 300px;
-  background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+  background: linear-gradient(135deg, #0a0a1f 0%, #1a1a4e 100%);
   top: 60%;
   left: 30%;
   animation: float-4 35s ease-in-out infinite;
