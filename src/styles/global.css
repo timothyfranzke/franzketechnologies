@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* Import Poppins from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 @theme {
   /* Navy/dark blue for hero and footer */
   --color-navy-900: #0f172a;
@@ -17,7 +20,7 @@
   --color-accent-500: #3b82f6;
   --color-accent-600: #2563eb;
 
-  --font-family-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-family-sans: "Poppins", sans-serif;
 }
 
 html {
@@ -26,11 +29,96 @@ html {
 
 body {
   font-family: var(--font-family-sans);
+  font-size: 20px;
+  font-feature-settings: normal;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Gradient background for hero */
+/* Header diagonal split */
+.header-split {
+  position: relative;
+  overflow: hidden;
+}
+
+.header-split::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 38%;
+  height: 100%;
+  background: white;
+  clip-path: polygon(0 0, 100% 0, 85% 100%, 0 100%);
+  z-index: -1;
+}
+
+.header-split-dark {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+}
+
+.header-split-light {
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.header-split-light::before {
+  display: none;
+}
+
+/* Logo glow animation */
+.logo-glow-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-glow {
+  position: absolute;
+  inset: -6px;
+  background: radial-gradient(ellipse 60% 40% at 50% 20%, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.15) 40%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(6px);
+  animation: glow-rotate 6s linear infinite;
+}
+
+@keyframes glow-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Hero diagonal split */
+.hero-diagonal {
+  position: relative;
+  overflow: hidden;
+}
+
+/* White background for the full hero */
+.hero-gradient-section {
+  position: absolute;
+  inset: 0;
+  background: white;
+  z-index: 0;
+}
+
+/* Navy diagonal on the left - 80% width with matching slope */
+.hero-white-section {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+  /* Adjusted to match header's visual angle (less steep for taller element) */
+  clip-path: polygon(0 0, 100% 0, 53% 100%, 0 100%);
+  z-index: 0;
+}
+
+/* Legacy gradient class for other uses */
 .hero-gradient {
   background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
 }
@@ -42,4 +130,145 @@ body {
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: #14b8a6;
+}
+
+/* Scroll animations */
+.animate-on-scroll {
+  opacity: 0;
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.animate-on-scroll.slide-from-left {
+  transform: translateX(-50px);
+}
+
+.animate-on-scroll.slide-from-right {
+  transform: translateX(50px);
+}
+
+.animate-on-scroll.slide-from-bottom {
+  transform: translateY(30px);
+}
+
+.animate-on-scroll.is-visible {
+  opacity: 1;
+  transform: translateX(0) translateY(0);
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .animate-on-scroll {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .bg-shape,
+  .logo-glow {
+    animation: none !important;
+  }
+}
+
+/* Animated background shapes */
+.bg-shapes-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: -1;
+}
+
+.bg-shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.15;
+}
+
+.bg-shape-1 {
+  width: 600px;
+  height: 600px;
+  background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+  top: -200px;
+  right: -100px;
+  animation: float-1 25s ease-in-out infinite;
+}
+
+.bg-shape-2 {
+  width: 500px;
+  height: 500px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  top: 40%;
+  left: -150px;
+  animation: float-2 30s ease-in-out infinite;
+}
+
+.bg-shape-3 {
+  width: 400px;
+  height: 400px;
+  background: linear-gradient(135deg, #14b8a6 0%, #3b82f6 100%);
+  bottom: 10%;
+  right: -100px;
+  animation: float-3 20s ease-in-out infinite;
+}
+
+.bg-shape-4 {
+  width: 300px;
+  height: 300px;
+  background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+  top: 60%;
+  left: 30%;
+  animation: float-4 35s ease-in-out infinite;
+  opacity: 0.1;
+}
+
+@keyframes float-1 {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(-30px, 40px) rotate(5deg);
+  }
+  50% {
+    transform: translate(20px, 60px) rotate(-5deg);
+  }
+  75% {
+    transform: translate(40px, 20px) rotate(3deg);
+  }
+}
+
+@keyframes float-2 {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  33% {
+    transform: translate(50px, -30px) rotate(-3deg);
+  }
+  66% {
+    transform: translate(20px, 40px) rotate(5deg);
+  }
+}
+
+@keyframes float-3 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-40px, -30px) scale(1.1);
+  }
+}
+
+@keyframes float-4 {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(60px, 30px) rotate(10deg);
+  }
+  50% {
+    transform: translate(30px, -40px) rotate(-5deg);
+  }
+  75% {
+    transform: translate(-20px, 20px) rotate(5deg);
+  }
 }

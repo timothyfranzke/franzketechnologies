@@ -36,6 +36,14 @@ const fullTitle = title === 'Home' ? 'Franzke Technologies' : `${title} | Franzk
     <title>{fullTitle}</title>
   </head>
   <body class="flex min-h-screen flex-col bg-white text-slate-900">
+    <!-- Animated background shapes -->
+    <div class="bg-shapes-container">
+      <div class="bg-shape bg-shape-1"></div>
+      <div class="bg-shape bg-shape-2"></div>
+      <div class="bg-shape bg-shape-3"></div>
+      <div class="bg-shape bg-shape-4"></div>
+    </div>
+
     <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-white focus:p-4">
       Skip to content
     </a>
@@ -44,5 +52,25 @@ const fullTitle = title === 'Home' ? 'Franzke Technologies' : `${title} | Franzk
       <slot />
     </main>
     <Footer />
+
+    <script>
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+            }
+          });
+        },
+        {
+          threshold: 0.1,
+          rootMargin: '0px 0px -50px 0px',
+        }
+      );
+
+      document.querySelectorAll('.animate-on-scroll').forEach((el) => {
+        observer.observe(el);
+      });
+    </script>
   </body>
 </html>
