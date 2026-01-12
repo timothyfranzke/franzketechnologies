@@ -6,9 +6,16 @@ import Footer from '../components/Footer.astro';
 interface Props {
   title: string;
   description?: string;
+  headerVariant?: 'light' | 'dark';
+  hideHeader?: boolean;
 }
 
-const { title, description = "Franzke Technologies - 20 years of architecture, accelerated by AI." } = Astro.props;
+const {
+  title,
+  description = "Franzke Technologies - 20 years of architecture, accelerated by AI.",
+  headerVariant = 'light',
+  hideHeader = false
+} = Astro.props;
 const fullTitle = title === 'Home' ? 'Franzke Technologies' : `${title} | Franzke Technologies`;
 ---
 
@@ -32,7 +39,7 @@ const fullTitle = title === 'Home' ? 'Franzke Technologies' : `${title} | Franzk
     <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-white focus:p-4">
       Skip to content
     </a>
-    <Header />
+    {!hideHeader && <Header variant={headerVariant} />}
     <main id="main-content" class="flex-1">
       <slot />
     </main>

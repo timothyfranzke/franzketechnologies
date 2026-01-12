@@ -62,17 +62,24 @@ const projects = {
 ---
 
 <BaseLayout title="Work" description="Portfolio of past projects spanning enterprise systems, SaaS platforms, and web development.">
-  <section class="py-16 sm:py-20">
-    <div class="mx-auto max-w-5xl px-4 sm:px-6">
-      <h1 class="text-3xl font-bold text-slate-900 sm:text-4xl">Work</h1>
-      <p class="mt-4 text-lg text-slate-600">
+  <!-- Hero -->
+  <section class="bg-slate-50 py-16 sm:py-20">
+    <div class="mx-auto max-w-6xl px-4 sm:px-6">
+      <p class="section-label">Portfolio</p>
+      <h1 class="mt-4 text-3xl font-bold text-slate-900 sm:text-4xl">Work</h1>
+      <p class="mt-4 max-w-2xl text-lg text-slate-600">
         A selection of projects I've worked on over the years.
       </p>
+    </div>
+  </section>
 
+  <section class="py-16 sm:py-20">
+    <div class="mx-auto max-w-6xl px-4 sm:px-6">
       <!-- Enterprise & Government -->
-      <div class="mt-12">
-        <h2 class="text-xl font-semibold text-slate-900">Enterprise & Government</h2>
-        <div class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div>
+        <p class="section-label">Enterprise & Government</p>
+        <h2 class="mt-2 text-2xl font-semibold text-slate-900">Large-scale systems</h2>
+        <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {projects.enterprise.map((project) => (
             <ProjectCard
               title={project.title}
@@ -84,9 +91,10 @@ const projects = {
       </div>
 
       <!-- SaaS & Platforms -->
-      <div class="mt-12">
-        <h2 class="text-xl font-semibold text-slate-900">SaaS & Platforms</h2>
-        <div class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="mt-16">
+        <p class="section-label">SaaS & Platforms</p>
+        <h2 class="mt-2 text-2xl font-semibold text-slate-900">Product development</h2>
+        <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {projects.saas.map((project) => (
             <ProjectCard
               title={project.title}
@@ -98,9 +106,10 @@ const projects = {
       </div>
 
       <!-- Web & Ecommerce -->
-      <div class="mt-12">
-        <h2 class="text-xl font-semibold text-slate-900">Web & Ecommerce</h2>
-        <div class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="mt-16">
+        <p class="section-label">Web & Ecommerce</p>
+        <h2 class="mt-2 text-2xl font-semibold text-slate-900">Websites & online stores</h2>
+        <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {projects.web.map((project) => (
             <ProjectCard
               title={project.title}
@@ -111,15 +120,22 @@ const projects = {
           ))}
         </div>
       </div>
+    </div>
+  </section>
 
-      <div class="mt-16 border-t border-slate-200 pt-8">
-        <p class="text-slate-600">
-          Have a project in mind?{' '}
-          <a href="/contact" class="font-medium text-accent-600 hover:text-accent-700">
-            Let's talk about it
-          </a>
-        </p>
-      </div>
+  <!-- CTA -->
+  <section class="border-t border-slate-200 bg-slate-50 py-16 sm:py-20">
+    <div class="mx-auto max-w-6xl px-4 text-center sm:px-6">
+      <h2 class="text-2xl font-bold text-slate-900">Have a project in mind?</h2>
+      <p class="mt-4 text-slate-600">
+        I'd love to hear about what you're building.
+      </p>
+      <a
+        href="/contact"
+        class="mt-8 inline-block rounded-full bg-teal-500 px-8 py-3 text-sm font-medium text-white transition-all hover:bg-teal-600"
+      >
+        Let's talk about it
+      </a>
     </div>
   </section>
 </BaseLayout>

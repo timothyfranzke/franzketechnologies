@@ -1,32 +1,52 @@
 ---
+interface Props {
+  variant?: 'light' | 'dark';
+}
+
+const { variant = 'light' } = Astro.props;
+
 const navLinks = [
-  { href: '/about', label: 'About' },
+  { href: '/', label: 'Home' },
   { href: '/services', label: 'Services' },
   { href: '/work', label: 'Work' },
+  { href: '/about', label: 'About' },
   { href: '/blog', label: 'Blog' },
-  { href: '/contact', label: 'Contact' },
 ];
 
 const currentPath = Astro.url.pathname;
+const isDark = variant === 'dark';
 ---
 
-<header class="border-b border-slate-200 bg-white">
-  <nav class="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
-    <a href="/" class="text-xl font-semibold text-slate-900 hover:text-slate-700">
-      Franzke Technologies
+<header class:list={[
+  'relative z-10',
+  isDark ? 'bg-transparent' : 'bg-white border-b border-slate-200'
+]}>
+  <nav class="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
+    <!-- Logo -->
+    <a href="/" class:list={[
+      'text-xl font-bold tracking-tight',
+      isDark ? 'text-white' : 'text-navy-900'
+    ]}>
+      <span class="flex items-center gap-2">
+        <svg class="h-8 w-8" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="6" fill={isDark ? '#14b8a6' : '#0f172a'}/>
+          <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" fill="white" font-family="system-ui" font-weight="bold" font-size="16">F</text>
+        </svg>
+        Franzke
+      </span>
     </a>
 
     <!-- Desktop Navigation -->
-    <ul class="hidden gap-8 md:flex">
+    <ul class="hidden items-center gap-8 md:flex">
       {navLinks.map(({ href, label }) => (
         <li>
           <a
             href={href}
             class:list={[
               'text-sm font-medium transition-colors',
-              currentPath === href || currentPath.startsWith(href + '/')
-                ? 'text-accent-600'
-                : 'text-slate-600 hover:text-slate-900',
+              currentPath === href || (href !== '/' && currentPath.startsWith(href))
+                ? isDark ? 'text-teal-400' : 'text-teal-600'
+                : isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900',
             ]}
           >
             {label}
@@ -35,6 +55,21 @@ const currentPath = Astro.url.pathname;
       ))}
     </ul>
 
+    <!-- CTA Button -->
+    <div class="hidden md:block">
+      <a
+        href="/contact"
+        class:list={[
+          'rounded-full px-5 py-2.5 text-sm font-medium transition-all',
+          isDark
+            ? 'border border-navy-600 bg-navy-800 text-white hover:bg-navy-700'
+            : 'bg-navy-900 text-white hover:bg-navy-800'
+        ]}
+      >
+        Get started
+      </a>
+    </div>
+
     <!-- Mobile Menu Button -->
     <button
       type="button"
@@ -42,14 +77,17 @@ const currentPath = Astro.url.pathname;
       aria-label="Toggle menu"
       id="mobile-menu-button"
     >
-      <svg class="h-6 w-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg class:list={['h-6 w-6', isDark ? 'text-white' : 'text-slate-600']} fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
       </svg>
     </button>
   </nav>
 
   <!-- Mobile Navigation -->
-  <div id="mobile-menu" class="hidden border-t border-slate-200 md:hidden">
+  <div id="mobile-menu" class:list={[
+    'hidden md:hidden',
+    isDark ? 'bg-navy-900 border-t border-navy-700' : 'bg-white border-t border-slate-200'
+  ]}>
     <ul class="space-y-1 px-4 py-3">
       {navLinks.map(({ href, label }) => (
         <li>
@@ -57,15 +95,23 @@ const currentPath = Astro.url.pathname;
             href={href}
             class:list={[
               'block rounded-md px-3 py-2 text-base font-medium transition-colors',
-              currentPath === href || currentPath.startsWith(href + '/')
-                ? 'bg-slate-100 text-accent-600'
-                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+              currentPath === href || (href !== '/' && currentPath.startsWith(href))
+                ? isDark ? 'bg-navy-800 text-teal-400' : 'bg-slate-100 text-teal-600'
+                : isDark ? 'text-slate-300 hover:bg-navy-800 hover:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
             ]}
           >
             {label}
           </a>
         </li>
       ))}
+      <li class="pt-2">
+        <a
+          href="/contact"
+          class="block rounded-full bg-teal-500 px-4 py-2 text-center text-sm font-medium text-white hover:bg-teal-600"
+        >
+          Get started
+        </a>
+      </li>
     </ul>
   </div>
 </header>
