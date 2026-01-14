@@ -8,15 +8,19 @@ interface Props {
   description?: string;
   headerVariant?: 'light' | 'dark';
   hideHeader?: boolean;
+  keywords?: string;
 }
 
 const {
   title,
-  description = "Franzke Technologies - 20 years of architecture, accelerated by AI.",
+  description = "Kansas City software development and AI consulting. Custom web applications, AI strategy, and delivery acceleration from a 20+ year architect.",
   headerVariant = 'light',
-  hideHeader = false
+  hideHeader = false,
+  keywords = "software development Kansas City, web development Kansas City, AI consulting, software architect, custom software, Overland Park"
 } = Astro.props;
-const fullTitle = title === 'Home' ? 'Franzke Technologies' : `${title} | Franzke Technologies`;
+const fullTitle = title === 'Home' ? 'Franzke Technologies | Kansas City Software Development & AI Consulting' : `${title} | Franzke Technologies`;
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const ogImage = new URL('/og.png', Astro.site);
 ---
 
 <!doctype html>
@@ -25,16 +29,90 @@ const fullTitle = title === 'Home' ? 'Franzke Technologies' : `${title} | Franzk
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
+    <meta name="keywords" content={keywords} />
     <meta name="generator" content={Astro.generator} />
+    <meta name="geo.region" content="US-KS" />
+    <meta name="geo.placename" content="Overland Park" />
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href={canonicalURL} />
 
     <!-- Open Graph -->
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/og.png" />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:site_name" content="Franzke Technologies" />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
 
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <title>{fullTitle}</title>
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "ProfessionalService",
+      "name": "Franzke Technologies",
+      "description": "Kansas City software development and AI consulting. Custom web applications, AI strategy, and delivery acceleration.",
+      "url": "https://franzketechnologies.com",
+      "logo": "https://franzketechnologies.com/logo.png",
+      "image": "https://franzketechnologies.com/og.png",
+      "telephone": "+1-913-522-9401",
+      "email": "support@franzketechnologies.com",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Overland Park",
+        "addressRegion": "KS",
+        "addressCountry": "US"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": "38.9822",
+        "longitude": "-94.6708"
+      },
+      "areaServed": [
+        {
+          "@type": "City",
+          "name": "Kansas City"
+        },
+        {
+          "@type": "City",
+          "name": "Overland Park"
+        },
+        {
+          "@type": "State",
+          "name": "Kansas"
+        },
+        {
+          "@type": "State",
+          "name": "Missouri"
+        }
+      ],
+      "serviceType": [
+        "Software Development",
+        "Web Development",
+        "AI Consulting",
+        "AI Strategy",
+        "Custom Software Development",
+        "Software Architecture"
+      ],
+      "founder": {
+        "@type": "Person",
+        "name": "Timothy Franzke",
+        "jobTitle": "Software Architect",
+        "description": "Software architect with 20+ years of experience specializing in AI-augmented development"
+      },
+      "sameAs": [
+        "https://www.linkedin.com/in/timfranzke"
+      ]
+    })} />
   </head>
   <body class="flex min-h-screen flex-col bg-white text-slate-900">
     <!-- Animated background shapes -->

@@ -2,6 +2,11 @@
 import '../styles/global.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+
+const title = "About Timothy Franzke | Franzke Technologies";
+const description = "Timothy Franzke - Kansas City software architect with 20+ years experience. AI-augmented development, custom software, and web applications. Based in Overland Park, serving the KC metro area.";
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const ogImage = new URL('/og.png', Astro.site);
 ---
 
 <!doctype html>
@@ -9,16 +14,62 @@ import Footer from '../components/Footer.astro';
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Learn about Timothy Franzke - 20+ years of software development experience, now accelerated by AI." />
+    <meta name="description" content={description} />
+    <meta name="keywords" content="Timothy Franzke, software architect Kansas City, AI developer, web developer Overland Park, software consultant KC" />
+    <meta name="geo.region" content="US-KS" />
+    <meta name="geo.placename" content="Overland Park" />
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href={canonicalURL} />
 
     <!-- Open Graph -->
-    <meta property="og:title" content="About | Franzke Technologies" />
-    <meta property="og:description" content="Learn about Timothy Franzke - 20+ years of software development experience, now accelerated by AI." />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="/og.png" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="profile" />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:site_name" content="Franzke Technologies" />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
 
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <title>About | Franzke Technologies</title>
+    <title>{title}</title>
+
+    <!-- JSON-LD Person Schema -->
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": "Timothy Franzke",
+      "jobTitle": "Software Architect",
+      "description": "Software architect with 20+ years of experience specializing in AI-augmented development",
+      "url": "https://franzketechnologies.com/about",
+      "image": "https://franzketechnologies.com/tim.jpeg",
+      "worksFor": {
+        "@type": "Organization",
+        "name": "Franzke Technologies",
+        "url": "https://franzketechnologies.com"
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Overland Park",
+        "addressRegion": "KS",
+        "addressCountry": "US"
+      },
+      "knowsAbout": [
+        "Software Architecture",
+        "AI Development",
+        "Web Development",
+        "Custom Software",
+        "IoT Systems",
+        "Kafka",
+        "Node.js"
+      ]
+    })} />
   </head>
   <body class="flex min-h-screen flex-col bg-white text-slate-900">
     <!-- Animated background shapes -->
