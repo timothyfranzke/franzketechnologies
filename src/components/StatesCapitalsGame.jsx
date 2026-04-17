@@ -991,6 +991,11 @@ const Study = ({ onExit, category, direction: dir }) => {
   const [pass, setPass] = useState(1);
   const [done, setDone] = useState(false);
   const [filter, setFilter] = useState("all"); // "all" | "missed"
+  const [swipeX, setSwipeX] = useState(0);
+  const swipeStartRef = useRef({ x: 0, y: 0 });
+  const swipingRef = useRef(false);
+  const justSwipedRef = useRef(false);
+  const SWIPE_THRESHOLD = 80;
 
   const viewDeck = filter === "missed"
     ? deck.filter((d) => missed.has(d.s))
@@ -1055,6 +1060,47 @@ const Study = ({ onExit, category, direction: dir }) => {
         setPass((p) => p + 1);
       }
     }
+  };
+
+  const onSwipeStart = (e) => {
+    const t = e.touches[0];
+    swipeStartRef.current = { x: t.clientX, y: t.clientY };
+    swipingRef.current = false;
+  };
+
+  const onSwipeMove = (e) => {
+    const t = e.touches[0];
+    const dx = t.clientX - swipeStartRef.current.x;
+    const dy = t.clientY - swipeStartRef.current.y;
+    if (!swipingRef.current && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+      swipingRef.current = true;
+    }
+    if (swipingRef.current) {
+      e.preventDefault();
+      setSwipeX(dx);
+    }
+  };
+
+  const onSwipeEnd = () => {
+    if (swipingRef.current) {
+      justSwipedRef.current = true;
+      setTimeout(() => { justSwipedRef.current = false; }, 50);
+    }
+    if (Math.abs(swipeX) > SWIPE_THRESHOLD) {
+      const knew = swipeX > 0;
+      setSwipeX(knew ? 500 : -500);
+      setTimeout(() => {
+        setSwipeX(0);
+        advance(knew);
+      }, 250);
+    } else {
+      setSwipeX(0);
+    }
+    swipingRef.current = false;
+  };
+
+  const handleFlipClick = () => {
+    if (!justSwipedRef.current) setFlipped((f) => !f);
   };
 
   if (done) {
@@ -1219,7 +1265,7 @@ const Study = ({ onExit, category, direction: dir }) => {
         />
       </div>
 
-      {/* Perspective wrapper */}
+      {/* Card wrapper — swipeable */}
       <div
         key={`${pass}-${viewIdx}-${filter}`}
         className="w-full mb-6"
@@ -1227,11 +1273,17 @@ const Study = ({ onExit, category, direction: dir }) => {
           perspective: "1600px",
           aspectRatio: "4 / 5",
           animation: slideAnim,
+          position: "relative",
+          transform: `translateX(${swipeX}px) rotate(${swipeX * 0.05}deg)`,
+          transition: swipingRef.current ? "none" : "transform 0.25s ease",
         }}
+        onTouchStart={onSwipeStart}
+        onTouchMove={onSwipeMove}
+        onTouchEnd={onSwipeEnd}
       >
         {/* Flip container */}
         <div
-          onClick={() => setFlipped((f) => !f)}
+          onClick={handleFlipClick}
           style={{
             position: "relative",
             width: "100%",
@@ -1371,6 +1423,46 @@ const Study = ({ onExit, category, direction: dir }) => {
             </div>
           </div>
         </div>
+
+        {/* Swipe hint overlay */}
+        {swipeX !== 0 && (
+          <>
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                borderRadius: "1.5rem",
+                background: swipeX > 0 ? "var(--sage)" : "var(--rust)",
+                opacity: Math.min(Math.abs(swipeX) / SWIPE_THRESHOLD, 1) * 0.25,
+                pointerEvents: "none",
+                zIndex: 10,
+              }}
+            />
+            <div
+              className="font-display font-bold text-xl"
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                zIndex: 11,
+                pointerEvents: "none",
+                opacity: Math.min(Math.abs(swipeX) / SWIPE_THRESHOLD, 1),
+                color: swipeX > 0 ? "var(--sage)" : "var(--rust)",
+                textShadow: "0 2px 8px rgba(0,0,0,0.15)",
+              }}
+            >
+              {swipeX > 0 ? "Know It" : "Don't Know"}
+            </div>
+          </>
+        )}
+      </div>
+
+      <div
+        className="text-center mb-3 font-mono text-[10px] uppercase tracking-widest"
+        style={{ color: "var(--dusty)", opacity: 0.5 }}
+      >
+        swipe left or right to judge
       </div>
 
       <div className="flex gap-3">
@@ -2076,7 +2168,7 @@ export default function App() {
       style={{ color: "var(--ink)" }}
     >
       <GlobalStyles />
-      <div className="max-w-lg mx-auto px-5 py-8 relative">
+      <div className="max-w-lg mx-auto px-5 pt-14 pb-8 relative">
         {screen === "home" && (
           <Home
             stats={stats}
