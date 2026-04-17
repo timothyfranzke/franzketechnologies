@@ -2,56 +2,56 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 
 // ─── DATA ────────────────────────────────────────────────────────────────
 const STATES = [
-  { s: "Alabama", c: "Montgomery", r: "South" },
-  { s: "Alaska", c: "Juneau", r: "West" },
-  { s: "Arizona", c: "Phoenix", r: "West" },
-  { s: "Arkansas", c: "Little Rock", r: "South" },
-  { s: "California", c: "Sacramento", r: "West" },
-  { s: "Colorado", c: "Denver", r: "West" },
-  { s: "Connecticut", c: "Hartford", r: "Northeast" },
-  { s: "Delaware", c: "Dover", r: "Northeast" },
-  { s: "Florida", c: "Tallahassee", r: "South" },
-  { s: "Georgia", c: "Atlanta", r: "South" },
-  { s: "Hawaii", c: "Honolulu", r: "West" },
-  { s: "Idaho", c: "Boise", r: "West" },
-  { s: "Illinois", c: "Springfield", r: "Midwest" },
-  { s: "Indiana", c: "Indianapolis", r: "Midwest" },
-  { s: "Iowa", c: "Des Moines", r: "Midwest" },
-  { s: "Kansas", c: "Topeka", r: "Midwest" },
-  { s: "Kentucky", c: "Frankfort", r: "South" },
-  { s: "Louisiana", c: "Baton Rouge", r: "South" },
-  { s: "Maine", c: "Augusta", r: "Northeast" },
-  { s: "Maryland", c: "Annapolis", r: "Northeast" },
-  { s: "Massachusetts", c: "Boston", r: "Northeast" },
-  { s: "Michigan", c: "Lansing", r: "Midwest" },
-  { s: "Minnesota", c: "Saint Paul", r: "Midwest" },
-  { s: "Mississippi", c: "Jackson", r: "South" },
-  { s: "Missouri", c: "Jefferson City", r: "Midwest" },
-  { s: "Montana", c: "Helena", r: "West" },
-  { s: "Nebraska", c: "Lincoln", r: "Midwest" },
-  { s: "Nevada", c: "Carson City", r: "West" },
-  { s: "New Hampshire", c: "Concord", r: "Northeast" },
-  { s: "New Jersey", c: "Trenton", r: "Northeast" },
-  { s: "New Mexico", c: "Santa Fe", r: "West" },
-  { s: "New York", c: "Albany", r: "Northeast" },
-  { s: "North Carolina", c: "Raleigh", r: "South" },
-  { s: "North Dakota", c: "Bismarck", r: "Midwest" },
-  { s: "Ohio", c: "Columbus", r: "Midwest" },
-  { s: "Oklahoma", c: "Oklahoma City", r: "South" },
-  { s: "Oregon", c: "Salem", r: "West" },
-  { s: "Pennsylvania", c: "Harrisburg", r: "Northeast" },
-  { s: "Rhode Island", c: "Providence", r: "Northeast" },
-  { s: "South Carolina", c: "Columbia", r: "South" },
-  { s: "South Dakota", c: "Pierre", r: "Midwest" },
-  { s: "Tennessee", c: "Nashville", r: "South" },
-  { s: "Texas", c: "Austin", r: "South" },
-  { s: "Utah", c: "Salt Lake City", r: "West" },
-  { s: "Vermont", c: "Montpelier", r: "Northeast" },
-  { s: "Virginia", c: "Richmond", r: "South" },
-  { s: "Washington", c: "Olympia", r: "West" },
-  { s: "West Virginia", c: "Charleston", r: "South" },
-  { s: "Wisconsin", c: "Madison", r: "Midwest" },
-  { s: "Wyoming", c: "Cheyenne", r: "West" },
+  { s: "Alabama", c: "Montgomery", a: "AL", r: "South" },
+  { s: "Alaska", c: "Juneau", a: "AK", r: "West" },
+  { s: "Arizona", c: "Phoenix", a: "AZ", r: "West" },
+  { s: "Arkansas", c: "Little Rock", a: "AR", r: "South" },
+  { s: "California", c: "Sacramento", a: "CA", r: "West" },
+  { s: "Colorado", c: "Denver", a: "CO", r: "West" },
+  { s: "Connecticut", c: "Hartford", a: "CT", r: "Northeast" },
+  { s: "Delaware", c: "Dover", a: "DE", r: "Northeast" },
+  { s: "Florida", c: "Tallahassee", a: "FL", r: "South" },
+  { s: "Georgia", c: "Atlanta", a: "GA", r: "South" },
+  { s: "Hawaii", c: "Honolulu", a: "HI", r: "West" },
+  { s: "Idaho", c: "Boise", a: "ID", r: "West" },
+  { s: "Illinois", c: "Springfield", a: "IL", r: "Midwest" },
+  { s: "Indiana", c: "Indianapolis", a: "IN", r: "Midwest" },
+  { s: "Iowa", c: "Des Moines", a: "IA", r: "Midwest" },
+  { s: "Kansas", c: "Topeka", a: "KS", r: "Midwest" },
+  { s: "Kentucky", c: "Frankfort", a: "KY", r: "South" },
+  { s: "Louisiana", c: "Baton Rouge", a: "LA", r: "South" },
+  { s: "Maine", c: "Augusta", a: "ME", r: "Northeast" },
+  { s: "Maryland", c: "Annapolis", a: "MD", r: "Northeast" },
+  { s: "Massachusetts", c: "Boston", a: "MA", r: "Northeast" },
+  { s: "Michigan", c: "Lansing", a: "MI", r: "Midwest" },
+  { s: "Minnesota", c: "Saint Paul", a: "MN", r: "Midwest" },
+  { s: "Mississippi", c: "Jackson", a: "MS", r: "South" },
+  { s: "Missouri", c: "Jefferson City", a: "MO", r: "Midwest" },
+  { s: "Montana", c: "Helena", a: "MT", r: "West" },
+  { s: "Nebraska", c: "Lincoln", a: "NE", r: "Midwest" },
+  { s: "Nevada", c: "Carson City", a: "NV", r: "West" },
+  { s: "New Hampshire", c: "Concord", a: "NH", r: "Northeast" },
+  { s: "New Jersey", c: "Trenton", a: "NJ", r: "Northeast" },
+  { s: "New Mexico", c: "Santa Fe", a: "NM", r: "West" },
+  { s: "New York", c: "Albany", a: "NY", r: "Northeast" },
+  { s: "North Carolina", c: "Raleigh", a: "NC", r: "South" },
+  { s: "North Dakota", c: "Bismarck", a: "ND", r: "Midwest" },
+  { s: "Ohio", c: "Columbus", a: "OH", r: "Midwest" },
+  { s: "Oklahoma", c: "Oklahoma City", a: "OK", r: "South" },
+  { s: "Oregon", c: "Salem", a: "OR", r: "West" },
+  { s: "Pennsylvania", c: "Harrisburg", a: "PA", r: "Northeast" },
+  { s: "Rhode Island", c: "Providence", a: "RI", r: "Northeast" },
+  { s: "South Carolina", c: "Columbia", a: "SC", r: "South" },
+  { s: "South Dakota", c: "Pierre", a: "SD", r: "Midwest" },
+  { s: "Tennessee", c: "Nashville", a: "TN", r: "South" },
+  { s: "Texas", c: "Austin", a: "TX", r: "South" },
+  { s: "Utah", c: "Salt Lake City", a: "UT", r: "West" },
+  { s: "Vermont", c: "Montpelier", a: "VT", r: "Northeast" },
+  { s: "Virginia", c: "Richmond", a: "VA", r: "South" },
+  { s: "Washington", c: "Olympia", a: "WA", r: "West" },
+  { s: "West Virginia", c: "Charleston", a: "WV", r: "South" },
+  { s: "Wisconsin", c: "Madison", a: "WI", r: "Midwest" },
+  { s: "Wyoming", c: "Cheyenne", a: "WY", r: "West" },
 ];
 
 // ─── UTILS ───────────────────────────────────────────────────────────────
@@ -66,6 +66,24 @@ const shuffle = (arr) => {
 
 const normalize = (s) =>
   s.toLowerCase().trim().replace(/\./g, "").replace(/\s+/g, " ").replace(/^st /, "saint ");
+
+const getQA = (state, category, direction) => {
+  const answerField = category === "abbreviations" ? "a" : "c";
+  const answerLabel = category === "abbreviations" ? "Abbreviation" : "Capital";
+  if (direction === "forward") {
+    return { question: state.s, answer: state[answerField], qLabel: "State", aLabel: answerLabel };
+  }
+  return { question: state[answerField], answer: state.s, qLabel: answerLabel, aLabel: "State" };
+};
+
+const getDistractors = (current, category, direction) => {
+  const field = direction === "forward"
+    ? (category === "abbreviations" ? "a" : "c")
+    : "s";
+  return shuffle(STATES.filter((x) => x !== current))
+    .slice(0, 3)
+    .map((x) => x[field]);
+};
 
 // ─── FONTS & GLOBAL STYLES ───────────────────────────────────────────────
 const GlobalStyles = () => (
@@ -180,19 +198,20 @@ const BackBtn = ({ onClick }) => (
 );
 
 // ─── HOME SCREEN ─────────────────────────────────────────────────────────
-const Home = ({ onPick, stats }) => {
+const Home = ({ onPick, stats, category, setCategory, direction, setDirection }) => {
+  const catLabel = category === "abbreviations" ? "Abbreviation" : "Capital";
   const modes = [
     {
       id: "quiz",
       title: "Quick Quiz",
-      desc: "Four choices. Pick the right capital.",
+      desc: `Four choices. Pick the right ${catLabel.toLowerCase()}.`,
       icon: "◆",
       color: "var(--rust)",
     },
     {
       id: "type",
       title: "Type It",
-      desc: "No hints. Spell the capital yourself.",
+      desc: `No hints. Spell the ${catLabel.toLowerCase()} yourself.`,
       icon: "✎",
       color: "var(--ink)",
     },
@@ -211,6 +230,9 @@ const Home = ({ onPick, stats }) => {
       color: "var(--sage)",
     },
   ];
+
+  const forwardLabel = category === "abbreviations" ? "State → Abbr" : "State → Capital";
+  const reverseLabel = category === "abbreviations" ? "Abbr → State" : "Capital → State";
 
   return (
     <div className="slide-up">
@@ -246,6 +268,52 @@ const Home = ({ onPick, stats }) => {
         >
           Est. for Memorizers
         </div>
+      </div>
+
+      {/* Category tabs */}
+      <div
+        className="flex rounded-full mb-3 overflow-hidden"
+        style={{ border: "2px solid var(--ink)" }}
+      >
+        {[
+          { id: "capitals", label: "Capitals" },
+          { id: "abbreviations", label: "Abbreviations" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setCategory(tab.id)}
+            className="flex-1 py-2.5 font-mono text-xs uppercase tracking-widest transition-colors"
+            style={{
+              background: category === tab.id ? "var(--ink)" : "transparent",
+              color: category === tab.id ? "var(--cream)" : "var(--ink)",
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Direction toggle */}
+      <div
+        className="flex rounded-full mb-6 overflow-hidden"
+        style={{ border: "2px solid rgba(26,37,55,0.2)" }}
+      >
+        {[
+          { id: "forward", label: forwardLabel },
+          { id: "reverse", label: reverseLabel },
+        ].map((opt) => (
+          <button
+            key={opt.id}
+            onClick={() => setDirection(opt.id)}
+            className="flex-1 py-2 font-mono text-[10px] uppercase tracking-widest transition-colors"
+            style={{
+              background: direction === opt.id ? "var(--rust)" : "transparent",
+              color: direction === opt.id ? "var(--cream)" : "var(--ink)",
+            }}
+          >
+            {opt.label}
+          </button>
+        ))}
       </div>
 
       {/* Stats strip */}
@@ -321,7 +389,7 @@ const Home = ({ onPick, stats }) => {
 };
 
 // ─── QUIZ MODE ───────────────────────────────────────────────────────────
-const Quiz = ({ onExit, recordResult }) => {
+const Quiz = ({ onExit, recordResult, category, direction: dir }) => {
   const deck = useMemo(() => shuffle(STATES), []);
   const [idx, setIdx] = useState(0);
   const [selected, setSelected] = useState(null);
@@ -329,17 +397,16 @@ const Quiz = ({ onExit, recordResult }) => {
   const [streak, setStreak] = useState(0);
 
   const current = deck[idx];
+  const qa = getQA(current, category, dir);
   const options = useMemo(() => {
-    const distractors = shuffle(STATES.filter((x) => x.c !== current.c))
-      .slice(0, 3)
-      .map((x) => x.c);
-    return shuffle([current.c, ...distractors]);
+    const distractors = getDistractors(current, category, dir);
+    return shuffle([qa.answer, ...distractors]);
   }, [idx]);
 
   const pick = (choice) => {
     if (selected) return;
     setSelected(choice);
-    const right = choice === current.c;
+    const right = choice === qa.answer;
     if (right) {
       setCorrect((c) => c + 1);
       setStreak((s) => s + 1);
@@ -359,7 +426,7 @@ const Quiz = ({ onExit, recordResult }) => {
 
   const getOptionStyle = (opt) => {
     if (!selected) return { background: "var(--paper)", color: "var(--ink)" };
-    if (opt === current.c) return { background: "var(--sage)", color: "var(--cream)" };
+    if (opt === qa.answer) return { background: "var(--sage)", color: "var(--cream)" };
     if (opt === selected) return { background: "var(--rust)", color: "var(--cream)" };
     return { background: "var(--paper)", color: "var(--ink)", opacity: 0.4 };
   };
@@ -406,7 +473,7 @@ const Quiz = ({ onExit, recordResult }) => {
           className="font-mono text-[10px] uppercase tracking-[0.3em] mb-3"
           style={{ color: "var(--dusty)" }}
         >
-          Capital of
+          {qa.aLabel} of
         </div>
         <h2
           className="font-display font-black leading-tight"
@@ -416,7 +483,7 @@ const Quiz = ({ onExit, recordResult }) => {
             fontVariationSettings: '"SOFT" 100, "WONK" 1',
           }}
         >
-          {current.s}
+          {qa.question}
         </h2>
         <div
           className="inline-block font-mono text-[9px] uppercase tracking-widest mt-2 px-2 py-0.5 rounded"
@@ -434,8 +501,8 @@ const Quiz = ({ onExit, recordResult }) => {
             onClick={() => pick(opt)}
             disabled={!!selected}
             className={`w-full rounded-2xl p-4 font-display font-bold text-lg transition-all active:scale-[0.98] ${
-              selected && opt === selected && opt !== current.c ? "shake" : ""
-            } ${selected && opt === current.c ? "pop" : ""}`}
+              selected && opt === selected && opt !== qa.answer ? "shake" : ""
+            } ${selected && opt === qa.answer ? "pop" : ""}`}
             style={{
               border: `2px solid var(--ink)`,
               boxShadow: selected ? "none" : "3px 3px 0 var(--ink)",
@@ -452,7 +519,7 @@ const Quiz = ({ onExit, recordResult }) => {
 };
 
 // ─── TYPE MODE ───────────────────────────────────────────────────────────
-const TypeIt = ({ onExit, recordResult }) => {
+const TypeIt = ({ onExit, recordResult, category, direction: dir }) => {
   const deck = useMemo(() => shuffle(STATES), []);
   const [idx, setIdx] = useState(0);
   const [input, setInput] = useState("");
@@ -463,6 +530,7 @@ const TypeIt = ({ onExit, recordResult }) => {
   const inputRef = useRef(null);
 
   const current = deck[idx];
+  const qa = getQA(current, category, dir);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -471,7 +539,7 @@ const TypeIt = ({ onExit, recordResult }) => {
   const submit = () => {
     if (feedback) return;
     if (!input.trim()) return;
-    const right = normalize(input) === normalize(current.c);
+    const right = normalize(input) === normalize(qa.answer);
     setFeedback(right ? "right" : "wrong");
     recordResult(right);
     if (right) {
@@ -551,7 +619,7 @@ const TypeIt = ({ onExit, recordResult }) => {
           className="font-mono text-[10px] uppercase tracking-[0.3em] mb-3"
           style={{ color: "var(--dusty)" }}
         >
-          Capital of
+          {qa.aLabel} of
         </div>
         <h2
           className="font-display font-black leading-tight"
@@ -561,7 +629,7 @@ const TypeIt = ({ onExit, recordResult }) => {
             fontVariationSettings: '"SOFT" 100, "WONK" 1',
           }}
         >
-          {current.s}
+          {qa.question}
         </h2>
       </div>
 
@@ -582,10 +650,10 @@ const TypeIt = ({ onExit, recordResult }) => {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && submit()}
           disabled={!!feedback}
-          placeholder="Type the capital..."
+          placeholder={`Type the ${qa.aLabel.toLowerCase()}...`}
           autoComplete="off"
           autoCorrect="off"
-          autoCapitalize="words"
+          autoCapitalize={category === "abbreviations" && dir === "forward" ? "characters" : "words"}
           className="w-full bg-transparent outline-none font-display font-bold text-2xl text-center"
           style={{
             color: feedback ? "var(--cream)" : "var(--ink)",
@@ -596,7 +664,7 @@ const TypeIt = ({ onExit, recordResult }) => {
             className="font-mono text-xs mt-2 text-center uppercase tracking-widest"
             style={{ color: "var(--cream)", opacity: 0.9 }}
           >
-            Answer: {current.c}
+            Answer: {qa.answer}
           </div>
         )}
       </div>
@@ -634,7 +702,7 @@ const TypeIt = ({ onExit, recordResult }) => {
 };
 
 // ─── SPEED MODE ──────────────────────────────────────────────────────────
-const Speed = ({ onExit, recordResult }) => {
+const Speed = ({ onExit, recordResult, category, direction: dir }) => {
   const [deck, setDeck] = useState(() => shuffle(STATES));
   const [idx, setIdx] = useState(0);
   const [time, setTime] = useState(60);
@@ -653,16 +721,15 @@ const Speed = ({ onExit, recordResult }) => {
   }, [time, done]);
 
   const current = deck[idx % deck.length];
+  const qa = getQA(current, category, dir);
   const options = useMemo(() => {
-    const distractors = shuffle(STATES.filter((x) => x.c !== current.c))
-      .slice(0, 3)
-      .map((x) => x.c);
-    return shuffle([current.c, ...distractors]);
-  }, [idx, current.c]);
+    const distractors = getDistractors(current, category, dir);
+    return shuffle([qa.answer, ...distractors]);
+  }, [idx, current]);
 
   const pick = (choice) => {
     if (done || flash) return;
-    const right = choice === current.c;
+    const right = choice === qa.answer;
     setFlash(right ? "right" : "wrong");
     recordResult(right);
     if (right) setScore((s) => s + 1);
@@ -671,6 +738,8 @@ const Speed = ({ onExit, recordResult }) => {
       setIdx((i) => i + 1);
     }, 220);
   };
+
+  const aLabel = category === "abbreviations" ? "abbreviations" : "capitals";
 
   if (done) {
     return (
@@ -691,7 +760,7 @@ const Speed = ({ onExit, recordResult }) => {
           className="font-display italic text-xl mb-8"
           style={{ color: "var(--ink)" }}
         >
-          capitals in 60 seconds
+          {aLabel} in 60 seconds
         </div>
         <div
           className="inline-block px-4 py-2 stamp font-mono text-xs"
@@ -788,7 +857,7 @@ const Speed = ({ onExit, recordResult }) => {
           className="font-mono text-[10px] uppercase tracking-[0.3em] mb-2"
           style={{ color: flashBg ? "var(--cream)" : "var(--dusty)" }}
         >
-          Capital of
+          {qa.aLabel} of
         </div>
         <h2
           className="font-display font-black leading-tight"
@@ -798,7 +867,7 @@ const Speed = ({ onExit, recordResult }) => {
             fontVariationSettings: '"SOFT" 100, "WONK" 1',
           }}
         >
-          {current.s}
+          {qa.question}
         </h2>
       </div>
 
@@ -824,22 +893,161 @@ const Speed = ({ onExit, recordResult }) => {
 };
 
 // ─── FLASHCARDS / STUDY ──────────────────────────────────────────────────
-const Study = ({ onExit }) => {
+const Study = ({ onExit, category, direction: dir }) => {
+  const [deck, setDeck] = useState(() => shuffle(STATES));
   const [idx, setIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
-  const [order, setOrder] = useState(() => STATES);
-  const [direction, setDirection] = useState("next");
+  const [slideDir, setSlideDir] = useState("next");
+  const [known, setKnown] = useState(new Set());
+  const [missed, setMissed] = useState(new Set());
+  const [firstPassMissed, setFirstPassMissed] = useState(new Set());
+  const [pass, setPass] = useState(1);
+  const [done, setDone] = useState(false);
 
-  const card = order[idx];
+  const card = deck[idx];
+  const qa = card ? getQA(card, category, dir) : null;
 
-  const nav = (dir) => {
-    setDirection(dir > 0 ? "next" : "prev");
+  const advance = (knew) => {
+    const key = card.s;
+    if (knew) {
+      setKnown((s) => new Set(s).add(key));
+      setMissed((s) => { const n = new Set(s); n.delete(key); return n; });
+    } else {
+      setMissed((s) => new Set(s).add(key));
+      if (pass === 1) setFirstPassMissed((s) => new Set(s).add(key));
+    }
+
+    setSlideDir("next");
     setFlipped(false);
-    setIdx((i) => (i + dir + order.length) % order.length);
+
+    if (idx + 1 < deck.length) {
+      setIdx((i) => i + 1);
+    } else {
+      // End of current deck — check for retry cards
+      const retryKeys = new Set();
+      deck.forEach((d) => {
+        const k = d.s;
+        if (!knew && k === key) retryKeys.add(k);
+        else if (!known.has(k) && !knew) retryKeys.add(k);
+        else if (missed.has(k) && k !== key) retryKeys.add(k);
+      });
+      // Recalculate: cards that were missed and not yet known
+      const nextDeck = STATES.filter((st) => {
+        if (st.s === key && knew) return false;
+        if (known.has(st.s)) return false;
+        if (missed.has(st.s)) return true;
+        if (!knew && st.s === key) return true;
+        return false;
+      });
+
+      if (nextDeck.length === 0) {
+        setDone(true);
+      } else {
+        setDeck(shuffle(nextDeck));
+        setIdx(0);
+        setPass((p) => p + 1);
+      }
+    }
   };
 
+  if (done) {
+    const firstPassKnew = 50 - firstPassMissed.size;
+    const pct = Math.round((firstPassKnew / 50) * 100);
+    const msg =
+      pct === 100
+        ? "Flawless."
+        : pct >= 90
+        ? "Nearly perfect."
+        : pct >= 75
+        ? "Solid recall."
+        : pct >= 50
+        ? "Getting there."
+        : "Keep at it.";
+
+    return (
+      <div className="fade-in text-center py-8">
+        <div
+          className="font-mono text-[10px] uppercase tracking-[0.3em] mb-3"
+          style={{ color: "var(--dusty)" }}
+        >
+          All Cards Reviewed
+        </div>
+        <div
+          className="font-display font-black leading-none mb-1"
+          style={{
+            fontSize: "clamp(5rem, 25vw, 9rem)",
+            color: "var(--rust)",
+            fontVariationSettings: '"SOFT" 100, "WONK" 1',
+          }}
+        >
+          {pct}%
+        </div>
+        <div
+          className="font-display italic text-2xl mb-2"
+          style={{ color: "var(--ink)" }}
+        >
+          {msg}
+        </div>
+        <div className="flex justify-around py-3 px-4 mb-6 rounded-2xl"
+          style={{ background: "rgba(26,37,55,0.05)" }}
+        >
+          <Stat label="First Try" value={firstPassKnew} tone="sage" />
+          <div style={{ width: 1, background: "rgba(26,37,55,0.1)" }} />
+          <Stat label="Needed Review" value={firstPassMissed.size} tone="rust" />
+          <div style={{ width: 1, background: "rgba(26,37,55,0.1)" }} />
+          <Stat label="Passes" value={pass} />
+        </div>
+        <div
+          className="inline-block px-4 py-2 stamp font-mono text-xs mb-8"
+        >
+          {pct === 100
+            ? "★ PERFECT RECALL ★"
+            : pct >= 90
+            ? "★ SHARP MIND ★"
+            : pct >= 75
+            ? "★ SOLID ★"
+            : "★ KEEP STUDYING ★"}
+        </div>
+        <div className="space-y-3">
+          <button
+            onClick={() => {
+              setDeck(shuffle(STATES));
+              setIdx(0);
+              setFlipped(false);
+              setKnown(new Set());
+              setMissed(new Set());
+              setFirstPassMissed(new Set());
+              setPass(1);
+              setDone(false);
+            }}
+            className="w-full rounded-2xl p-4 font-display font-bold text-lg"
+            style={{
+              background: "var(--rust)",
+              color: "var(--cream)",
+              border: "2px solid var(--ink)",
+              boxShadow: "3px 3px 0 var(--ink)",
+            }}
+          >
+            Start Over
+          </button>
+          <button
+            onClick={() => onExit(null)}
+            className="w-full rounded-2xl p-4 font-mono text-xs uppercase tracking-widest"
+            style={{
+              background: "transparent",
+              color: "var(--ink)",
+              border: "2px solid var(--ink)",
+            }}
+          >
+            Back to Menu
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const slideAnim =
-    direction === "next"
+    slideDir === "next"
       ? "slideInRight 0.5s cubic-bezier(0.16, 1, 0.3, 1)"
       : "slideInLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1)";
 
@@ -848,30 +1056,40 @@ const Study = ({ onExit }) => {
       <div className="flex items-center justify-between mb-6">
         <BackBtn onClick={() => onExit(null)} />
         <div className="flex gap-2">
-          <button
-            onClick={() => {
-              setOrder(shuffle(STATES));
-              setIdx(0);
-              setFlipped(false);
-              setDirection("next");
-            }}
-            className="font-mono text-xs uppercase tracking-widest px-3 py-1.5 rounded-full"
-            style={{ background: "rgba(26,37,55,0.08)", color: "var(--ink)" }}
-          >
-            Shuffle
-          </button>
+          {pass > 1 && (
+            <div
+              className="font-mono text-xs px-3 py-1.5 rounded-full font-bold"
+              style={{ background: "var(--gold)", color: "var(--ink)" }}
+            >
+              Pass {pass}
+            </div>
+          )}
           <div
             className="font-mono text-xs px-3 py-1.5 rounded-full"
             style={{ background: "rgba(26,37,55,0.08)", color: "var(--ink)" }}
           >
-            {idx + 1}/{order.length}
+            {idx + 1}/{deck.length}
           </div>
         </div>
       </div>
 
-      {/* Perspective wrapper — slides in/out between cards */}
+      {/* Progress bar */}
       <div
-        key={idx}
+        className="h-1 rounded-full mb-6 overflow-hidden"
+        style={{ background: "rgba(26,37,55,0.1)" }}
+      >
+        <div
+          className="h-full transition-all duration-500"
+          style={{
+            width: `${((idx + 1) / deck.length) * 100}%`,
+            background: "var(--sage)",
+          }}
+        />
+      </div>
+
+      {/* Perspective wrapper */}
+      <div
+        key={`${pass}-${idx}`}
         className="w-full mb-6"
         style={{
           perspective: "1600px",
@@ -879,7 +1097,7 @@ const Study = ({ onExit }) => {
           animation: slideAnim,
         }}
       >
-        {/* Flip container — rotates between front/back */}
+        {/* Flip container */}
         <div
           onClick={() => setFlipped((f) => !f)}
           style={{
@@ -892,7 +1110,7 @@ const Study = ({ onExit }) => {
             cursor: "pointer",
           }}
         >
-          {/* FRONT — State */}
+          {/* FRONT — Question */}
           <div
             className="rounded-3xl flex flex-col items-center justify-center"
             style={{
@@ -910,7 +1128,7 @@ const Study = ({ onExit }) => {
               className="absolute top-5 left-5 font-mono text-[10px] uppercase tracking-widest"
               style={{ color: "var(--dusty)" }}
             >
-              State · {card.r}
+              {qa.qLabel} · {card.r}
             </div>
             <div
               className="absolute top-5 right-5 font-mono text-[10px] font-bold"
@@ -919,7 +1137,6 @@ const Study = ({ onExit }) => {
               №{String(idx + 1).padStart(2, "0")}
             </div>
 
-            {/* Corner decorations */}
             <div
               className="absolute bottom-5 left-5 font-display text-2xl"
               style={{ color: "var(--rust)", opacity: 0.3 }}
@@ -942,7 +1159,7 @@ const Study = ({ onExit }) => {
                   fontVariationSettings: '"SOFT" 100, "WONK" 1',
                 }}
               >
-                {card.s}
+                {qa.question}
               </h2>
             </div>
 
@@ -950,11 +1167,11 @@ const Study = ({ onExit }) => {
               className="absolute bottom-12 left-1/2 -translate-x-1/2 font-mono text-[10px] uppercase tracking-widest whitespace-nowrap"
               style={{ color: "var(--dusty)", opacity: 0.7 }}
             >
-              tap to reveal capital
+              tap to reveal {qa.aLabel.toLowerCase()}
             </div>
           </div>
 
-          {/* BACK — Capital */}
+          {/* BACK — Answer */}
           <div
             className="rounded-3xl flex flex-col items-center justify-center"
             style={{
@@ -973,7 +1190,7 @@ const Study = ({ onExit }) => {
               className="absolute top-5 left-5 font-mono text-[10px] uppercase tracking-widest"
               style={{ color: "var(--gold)" }}
             >
-              Capital · {card.r}
+              {qa.aLabel} · {card.r}
             </div>
             <div
               className="absolute top-5 right-5 font-mono text-[10px] font-bold"
@@ -1000,7 +1217,7 @@ const Study = ({ onExit }) => {
                 className="font-mono text-xs uppercase tracking-[0.2em] mb-4"
                 style={{ color: "var(--gold)", opacity: 0.9 }}
               >
-                {card.s}
+                {qa.question}
               </div>
               <h2
                 className="font-display font-black italic leading-[0.9]"
@@ -1010,7 +1227,7 @@ const Study = ({ onExit }) => {
                   fontVariationSettings: '"SOFT" 100, "WONK" 1',
                 }}
               >
-                {card.c}
+                {qa.answer}
               </h2>
             </div>
 
@@ -1026,28 +1243,28 @@ const Study = ({ onExit }) => {
 
       <div className="flex gap-3">
         <button
-          onClick={() => nav(-1)}
+          onClick={() => advance(false)}
           className="flex-1 rounded-2xl p-4 font-display font-bold text-lg transition active:scale-[0.96]"
           style={{
-            background: "var(--paper)",
-            color: "var(--ink)",
+            background: "var(--rust)",
+            color: "var(--cream)",
             border: "2px solid var(--ink)",
             boxShadow: "2px 2px 0 var(--ink)",
           }}
         >
-          ← Prev
+          Don't Know
         </button>
         <button
-          onClick={() => nav(1)}
+          onClick={() => advance(true)}
           className="flex-1 rounded-2xl p-4 font-display font-bold text-lg transition active:scale-[0.96]"
           style={{
-            background: "var(--ink)",
+            background: "var(--sage)",
             color: "var(--cream)",
             border: "2px solid var(--ink)",
-            boxShadow: "2px 2px 0 var(--rust)",
+            boxShadow: "2px 2px 0 var(--ink)",
           }}
         >
-          Next →
+          Know It
         </button>
       </div>
     </div>
@@ -1133,6 +1350,8 @@ export default function App() {
   const [screen, setScreen] = useState("home"); // home | quiz | type | speed | study | results
   const [lastMode, setLastMode] = useState(null);
   const [result, setResult] = useState(null);
+  const [category, setCategory] = useState("capitals"); // capitals | abbreviations
+  const [direction, setDirection] = useState("forward"); // forward | reverse
   const [stats, setStats] = useState({
     played: 0,
     correct: 0,
@@ -1164,6 +1383,8 @@ export default function App() {
     }
   };
 
+  const modeProps = { category, direction };
+
   return (
     <div
       className="min-h-screen paper-texture grain relative font-body"
@@ -1174,6 +1395,10 @@ export default function App() {
         {screen === "home" && (
           <Home
             stats={stats}
+            category={category}
+            setCategory={setCategory}
+            direction={direction}
+            setDirection={setDirection}
             onPick={(id) => {
               if (id === "quiz") setScreen("quiz");
               if (id === "type") setScreen("type");
@@ -1183,15 +1408,15 @@ export default function App() {
           />
         )}
         {screen === "quiz" && (
-          <Quiz onExit={handleExit("quiz")} recordResult={recordResult} />
+          <Quiz onExit={handleExit("quiz")} recordResult={recordResult} {...modeProps} />
         )}
         {screen === "type" && (
-          <TypeIt onExit={handleExit("type")} recordResult={recordResult} />
+          <TypeIt onExit={handleExit("type")} recordResult={recordResult} {...modeProps} />
         )}
         {screen === "speed" && (
-          <Speed onExit={handleExit("speed")} recordResult={recordResult} />
+          <Speed onExit={handleExit("speed")} recordResult={recordResult} {...modeProps} />
         )}
-        {screen === "study" && <Study onExit={handleExit("study")} />}
+        {screen === "study" && <Study onExit={handleExit("study")} {...modeProps} />}
         {screen === "results" && result && (
           <Results
             result={result}
