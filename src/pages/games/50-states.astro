@@ -2,8 +2,8 @@
 import '../../styles/game.css';
 import StatesCapitalsGame from '../../components/StatesCapitalsGame.jsx';
 
-const title = 'Fifty & Capitals — States & Capitals Game';
-const description = 'Test your knowledge of all 50 US state capitals with quizzes, typing challenges, speed rounds, and flashcards.';
+const title = 'Nifty Fifty — States & Capitals Game';
+const description = 'Test your knowledge of all 50 US state capitals and abbreviations with quizzes, typing challenges, speed rounds, and flashcards.';
 ---
 
 <!doctype html>
@@ -15,11 +15,18 @@ const description = 'Test your knowledge of all 50 US state capitals with quizze
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/og-50-states.png" />
+    <meta property="og:image" content="/og-50-states-abv.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="/og-50-states.png" />
+    <meta name="twitter:image" content="/og-50-states-abv.png" />
+    <!-- PWA -->
+    <link rel="manifest" href="/games/nifty-fifty-manifest.json" />
+    <meta name="theme-color" content="#1A2537" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Nifty Fifty" />
+    <link rel="apple-touch-icon" href="/games/nifty-fifty-192.png" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <title>{title}</title>
   </head>
@@ -35,5 +42,10 @@ const description = 'Test your knowledge of all 50 US state capitals with quizze
       </a>
     </div>
     <StatesCapitalsGame client:only="react" />
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/games/nifty-fifty-sw.js");
+      }
+    </script>
   </body>
 </html>

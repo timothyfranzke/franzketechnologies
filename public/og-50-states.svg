@@ -34,18 +34,18 @@
     &#9733; A GEOGRAPHY GAME &#9733;
   </text>
 
-  <!-- Title: Fifty -->
+  <!-- Title: Nifty -->
   <text x="600" y="280" text-anchor="middle"
     font-family="Georgia, serif" font-size="120" font-weight="900"
     fill="#1A2537" letter-spacing="-2">
-    Fifty
+    Nifty
   </text>
 
-  <!-- Title: &amp; Capitals -->
+  <!-- Title: Fifty -->
   <text x="600" y="380" text-anchor="middle"
-    font-family="Georgia, serif" font-size="110" font-weight="900"
+    font-family="Georgia, serif" font-size="120" font-weight="900"
     fill="#C14A33" font-style="italic" letter-spacing="-2">
-    &amp; Capitals
+    Fifty
   </text>
 
   <!-- Stamp -->

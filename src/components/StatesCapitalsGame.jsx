@@ -252,7 +252,7 @@ const Home = ({ onPick, stats, category, setCategory, direction, setDirection })
             fontVariationSettings: '"SOFT" 80, "WONK" 1',
           }}
         >
-          Fifty<br />
+          Nifty<br />
           <span
             style={{
               color: "var(--rust)",
@@ -260,7 +260,7 @@ const Home = ({ onPick, stats, category, setCategory, direction, setDirection })
               fontVariationSettings: '"SOFT" 100, "WONK" 1',
             }}
           >
-            & Capitals
+            Fifty
           </span>
         </h1>
         <div
@@ -1345,9 +1345,82 @@ const Results = ({ result, onPlayAgain, onHome }) => {
   );
 };
 
+// ─── SPLASH SCREEN ──────────────────────────────────────────────────────
+const Splash = ({ onDone }) => {
+  const [fading, setFading] = useState(false);
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setFading(true), 2200);
+    const t2 = setTimeout(onDone, 2800);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [onDone]);
+
+  return (
+    <div
+      className="min-h-screen flex flex-col items-center justify-center transition-opacity duration-500"
+      style={{
+        background: "var(--ink)",
+        opacity: fading ? 0 : 1,
+      }}
+    >
+      <div
+        className="text-center"
+        style={{ animation: "fadeIn 0.8s ease-out" }}
+      >
+        <h1
+          className="font-display font-black leading-[0.9] mb-4"
+          style={{
+            fontSize: "clamp(3rem, 14vw, 5.5rem)",
+            color: "var(--cream)",
+            fontVariationSettings: '"SOFT" 80, "WONK" 1',
+          }}
+        >
+          Nifty<br />
+          <span
+            style={{
+              color: "var(--rust)",
+              fontStyle: "italic",
+              fontVariationSettings: '"SOFT" 100, "WONK" 1',
+            }}
+          >
+            Fifty
+          </span>
+        </h1>
+        <div
+          className="font-mono text-[10px] uppercase tracking-[0.3em] mb-8"
+          style={{ color: "var(--gold)", opacity: 0.8 }}
+        >
+          ★ A Geography Game ★
+        </div>
+        <div
+          style={{
+            width: 40,
+            height: 1,
+            background: "var(--dusty)",
+            margin: "0 auto 16px",
+            opacity: 0.4,
+          }}
+        />
+        <div
+          className="font-mono text-[10px] uppercase tracking-[0.2em]"
+          style={{ color: "var(--dusty)", opacity: 0.6 }}
+        >
+          brought to you by
+        </div>
+        <div
+          className="font-body text-sm font-semibold mt-1"
+          style={{ color: "var(--cream)", opacity: 0.8 }}
+        >
+          Franzke Technologies
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── MAIN APP ────────────────────────────────────────────────────────────
 export default function App() {
-  const [screen, setScreen] = useState("home"); // home | quiz | type | speed | study | results
+  const [screen, setScreen] = useState("splash"); // splash | home | quiz | type | speed | study | results
   const [lastMode, setLastMode] = useState(null);
   const [result, setResult] = useState(null);
   const [category, setCategory] = useState("capitals"); // capitals | abbreviations
@@ -1384,6 +1457,15 @@ export default function App() {
   };
 
   const modeProps = { category, direction };
+
+  if (screen === "splash") {
+    return (
+      <div className="font-body" style={{ color: "var(--ink)" }}>
+        <GlobalStyles />
+        <Splash onDone={() => setScreen("home")} />
+      </div>
+    );
+  }
 
   return (
     <div
