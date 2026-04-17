@@ -67,6 +67,44 @@ const shuffle = (arr) => {
 const normalize = (s) =>
   s.toLowerCase().trim().replace(/\./g, "").replace(/\s+/g, " ").replace(/^st /, "saint ");
 
+// ─── PERSISTENT STATS ───────────────────────────────────────────────────
+const STATS_KEY = "nifty-fifty-stats";
+
+const statsStore = {
+  _read() {
+    try { return JSON.parse(localStorage.getItem(STATS_KEY)) || {}; }
+    catch { return {}; }
+  },
+  _write(data) {
+    localStorage.setItem(STATS_KEY, JSON.stringify(data));
+  },
+  record(stateName, correct) {
+    const data = this._read();
+    if (!data[stateName]) data[stateName] = { correct: 0, wrong: 0 };
+    if (correct) data[stateName].correct++;
+    else data[stateName].wrong++;
+    this._write(data);
+  },
+  getAccuracy(stateName) {
+    const data = this._read();
+    const s = data[stateName];
+    if (!s || (s.correct + s.wrong === 0)) return null;
+    return s.correct / (s.correct + s.wrong);
+  },
+  getWeakest(count) {
+    const data = this._read();
+    const entries = Object.entries(data)
+      .filter(([, s]) => s.correct + s.wrong > 0)
+      .map(([name, s]) => ({ name, accuracy: s.correct / (s.correct + s.wrong) }))
+      .sort((a, b) => a.accuracy - b.accuracy);
+    return entries.slice(0, count).map((e) => e.name);
+  },
+  hasEnoughHistory(min = 5) {
+    const data = this._read();
+    return Object.values(data).filter((s) => s.correct + s.wrong > 0).length >= min;
+  },
+};
+
 const getQA = (state, category, direction) => {
   const answerField = category === "abbreviations" ? "a" : "c";
   const answerLabel = category === "abbreviations" ? "Abbreviation" : "Capital";
@@ -83,6 +121,44 @@ const getDistractors = (current, category, direction) => {
   return shuffle(STATES.filter((x) => x !== current))
     .slice(0, 3)
     .map((x) => x[field]);
+};
+
+// ─── MATCHING GAME HELPERS ──────────────────────────────────────────────
+const REGION_NAMES = ["South", "West", "Midwest", "Northeast"];
+
+const buildMatchDeck = (cardCount, source, region, category) => {
+  const pairCount = cardCount / 2;
+  let pool;
+
+  if (source === "region") {
+    pool = STATES.filter((s) => s.r === region);
+    if (pool.length < pairCount) {
+      const extras = shuffle(STATES.filter((s) => s.r !== region));
+      pool = [...pool, ...extras.slice(0, pairCount - pool.length)];
+    }
+  } else if (source === "weak") {
+    const weakNames = statsStore.getWeakest(pairCount);
+    pool = weakNames.map((name) => STATES.find((s) => s.s === name)).filter(Boolean);
+    if (pool.length < pairCount) {
+      const usedNames = new Set(pool.map((s) => s.s));
+      const extras = shuffle(STATES.filter((s) => !usedNames.has(s.s)));
+      pool = [...pool, ...extras.slice(0, pairCount - pool.length)];
+    }
+  } else {
+    pool = [...STATES];
+  }
+
+  const selected = shuffle(pool).slice(0, pairCount);
+  const answerField = category === "abbreviations" ? "a" : "c";
+  const answerLabel = category === "abbreviations" ? "Abbreviation" : "Capital";
+
+  const cards = [];
+  selected.forEach((state, i) => {
+    cards.push({ id: i * 2, pairId: i, type: "state", text: state.s, label: "State" });
+    cards.push({ id: i * 2 + 1, pairId: i, type: "answer", text: state[answerField], label: answerLabel });
+  });
+
+  return shuffle(cards);
 };
 
 // ─── FONTS & GLOBAL STYLES ───────────────────────────────────────────────
@@ -228,6 +304,13 @@ const Home = ({ onPick, stats, category, setCategory, direction, setDirection })
       desc: "Flip through all 50 at your pace.",
       icon: "❋",
       color: "var(--sage)",
+    },
+    {
+      id: "match",
+      title: "Match",
+      desc: "Classic memory game. Flip and find pairs.",
+      icon: "⬡",
+      color: "var(--gold)",
     },
   ];
 
@@ -414,6 +497,7 @@ const Quiz = ({ onExit, recordResult, category, direction: dir }) => {
       setStreak(0);
     }
     recordResult(right);
+    statsStore.record(current.s, right);
     setTimeout(() => {
       if (idx + 1 >= deck.length) {
         onExit({ correct: right ? correct + 1 : correct, total: deck.length });
@@ -542,6 +626,7 @@ const TypeIt = ({ onExit, recordResult, category, direction: dir }) => {
     const right = normalize(input) === normalize(qa.answer);
     setFeedback(right ? "right" : "wrong");
     recordResult(right);
+    statsStore.record(current.s, right);
     if (right) {
       setCorrect((c) => c + 1);
       setStreak((s) => s + 1);
@@ -558,6 +643,7 @@ const TypeIt = ({ onExit, recordResult, category, direction: dir }) => {
     setShowAnswer(true);
     setStreak(0);
     recordResult(false);
+    statsStore.record(current.s, false);
     setTimeout(() => next(false), 1500);
   };
 
@@ -732,6 +818,7 @@ const Speed = ({ onExit, recordResult, category, direction: dir }) => {
     const right = choice === qa.answer;
     setFlash(right ? "right" : "wrong");
     recordResult(right);
+    statsStore.record(current.s, right);
     if (right) setScore((s) => s + 1);
     setTimeout(() => {
       setFlash(null);
@@ -903,12 +990,32 @@ const Study = ({ onExit, category, direction: dir }) => {
   const [firstPassMissed, setFirstPassMissed] = useState(new Set());
   const [pass, setPass] = useState(1);
   const [done, setDone] = useState(false);
+  const [filter, setFilter] = useState("all"); // "all" | "missed"
 
-  const card = deck[idx];
+  const viewDeck = filter === "missed"
+    ? deck.filter((d) => missed.has(d.s))
+    : deck;
+  const viewIdx = Math.min(idx, viewDeck.length - 1);
+  const card = viewDeck[viewIdx] || deck[0];
   const qa = card ? getQA(card, category, dir) : null;
+
+  const applyFilter = (f) => {
+    setFilter(f);
+    setIdx(0);
+    setFlipped(false);
+  };
+
+  const skip = () => {
+    setSlideDir("next");
+    setFlipped(false);
+    if (viewIdx + 1 < viewDeck.length) {
+      setIdx(viewIdx + 1);
+    }
+  };
 
   const advance = (knew) => {
     const key = card.s;
+    statsStore.record(key, knew);
     if (knew) {
       setKnown((s) => new Set(s).add(key));
       setMissed((s) => { const n = new Set(s); n.delete(key); return n; });
@@ -1068,9 +1175,34 @@ const Study = ({ onExit, category, direction: dir }) => {
             className="font-mono text-xs px-3 py-1.5 rounded-full"
             style={{ background: "rgba(26,37,55,0.08)", color: "var(--ink)" }}
           >
-            {idx + 1}/{deck.length}
+            {viewIdx + 1}/{viewDeck.length}
           </div>
         </div>
+      </div>
+
+      {/* Filter toggle */}
+      <div
+        className="flex rounded-full mb-4 overflow-hidden"
+        style={{ border: "2px solid rgba(26,37,55,0.2)" }}
+      >
+        {[
+          { id: "all", label: "All" },
+          { id: "missed", label: "Don't Know Only" },
+        ].map((opt) => (
+          <button
+            key={opt.id}
+            onClick={() => applyFilter(opt.id)}
+            disabled={opt.id === "missed" && missed.size === 0}
+            className="flex-1 py-2 font-mono text-[10px] uppercase tracking-widest transition-colors"
+            style={{
+              background: filter === opt.id ? "var(--ink)" : "transparent",
+              color: filter === opt.id ? "var(--cream)" : "var(--ink)",
+              opacity: opt.id === "missed" && missed.size === 0 ? 0.3 : 1,
+            }}
+          >
+            {opt.label}{opt.id === "missed" && missed.size > 0 ? ` (${missed.size})` : ""}
+          </button>
+        ))}
       </div>
 
       {/* Progress bar */}
@@ -1081,7 +1213,7 @@ const Study = ({ onExit, category, direction: dir }) => {
         <div
           className="h-full transition-all duration-500"
           style={{
-            width: `${((idx + 1) / deck.length) * 100}%`,
+            width: `${((viewIdx + 1) / viewDeck.length) * 100}%`,
             background: "var(--sage)",
           }}
         />
@@ -1089,7 +1221,7 @@ const Study = ({ onExit, category, direction: dir }) => {
 
       {/* Perspective wrapper */}
       <div
-        key={`${pass}-${idx}`}
+        key={`${pass}-${viewIdx}-${filter}`}
         className="w-full mb-6"
         style={{
           perspective: "1600px",
@@ -1255,6 +1387,17 @@ const Study = ({ onExit, category, direction: dir }) => {
           Don't Know
         </button>
         <button
+          onClick={skip}
+          className="rounded-2xl px-3 p-4 font-mono text-xs uppercase tracking-widest transition active:scale-[0.96]"
+          style={{
+            background: "transparent",
+            color: "var(--ink)",
+            border: "2px solid rgba(26,37,55,0.2)",
+          }}
+        >
+          Skip
+        </button>
+        <button
           onClick={() => advance(true)}
           className="flex-1 rounded-2xl p-4 font-display font-bold text-lg transition active:scale-[0.96]"
           style={{
@@ -1266,6 +1409,464 @@ const Study = ({ onExit, category, direction: dir }) => {
         >
           Know It
         </button>
+      </div>
+    </div>
+  );
+};
+
+// ─── MATCH CONFIG ───────────────────────────────────────────────────────
+const MatchConfig = ({ category, onStart, onBack }) => {
+  const [cardCount, setCardCount] = useState(12);
+  const [source, setSource] = useState("random");
+  const [region, setRegion] = useState("South");
+  const hasHistory = statsStore.hasEnoughHistory(5);
+
+  const catLabel = category === "abbreviations" ? "abbreviations" : "capitals";
+
+  return (
+    <div className="slide-up">
+      <div className="flex items-center justify-between mb-6">
+        <BackBtn onClick={onBack} />
+        <div
+          className="font-mono text-xs px-3 py-1.5 rounded-full font-bold"
+          style={{ background: "var(--gold)", color: "var(--ink)" }}
+        >
+          Match
+        </div>
+      </div>
+
+      <div className="text-center mb-8">
+        <div
+          className="font-mono text-[10px] uppercase tracking-[0.3em] mb-2"
+          style={{ color: "var(--dusty)" }}
+        >
+          Memory Game
+        </div>
+        <h2
+          className="font-display font-black text-3xl leading-tight mb-2"
+          style={{ color: "var(--ink)", fontVariationSettings: '"SOFT" 100, "WONK" 1' }}
+        >
+          Set Up Your Board
+        </h2>
+        <div className="font-body text-sm" style={{ color: "var(--dusty)" }}>
+          Match states with their {catLabel}
+        </div>
+      </div>
+
+      {/* Card count */}
+      <div className="mb-6">
+        <div
+          className="font-mono text-[10px] uppercase tracking-widest mb-3"
+          style={{ color: "var(--dusty)" }}
+        >
+          Cards on Board
+        </div>
+        <div className="flex gap-2">
+          {[8, 12, 16, 20].map((n) => (
+            <button
+              key={n}
+              onClick={() => setCardCount(n)}
+              className="flex-1 py-3 rounded-xl font-mono text-sm font-bold transition"
+              style={{
+                background: cardCount === n ? "var(--ink)" : "var(--paper)",
+                color: cardCount === n ? "var(--cream)" : "var(--ink)",
+                border: "2px solid var(--ink)",
+              }}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+        <div
+          className="font-mono text-[10px] mt-1 text-center"
+          style={{ color: "var(--dusty)" }}
+        >
+          {cardCount / 2} pairs
+        </div>
+      </div>
+
+      {/* Source */}
+      <div className="mb-6">
+        <div
+          className="font-mono text-[10px] uppercase tracking-widest mb-3"
+          style={{ color: "var(--dusty)" }}
+        >
+          Card Source
+        </div>
+        <div className="space-y-2">
+          {[
+            { id: "random", label: "Random", desc: "Random states from all 50" },
+            { id: "region", label: "By Region", desc: "Focus on a specific region" },
+            { id: "weak", label: "Weak Areas", desc: "States you struggle with most", disabled: !hasHistory },
+          ].map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => !opt.disabled && setSource(opt.id)}
+              className="w-full text-left rounded-xl p-4 transition"
+              style={{
+                background: source === opt.id ? "var(--ink)" : "var(--paper)",
+                color: source === opt.id ? "var(--cream)" : "var(--ink)",
+                border: "2px solid var(--ink)",
+                opacity: opt.disabled ? 0.35 : 1,
+                cursor: opt.disabled ? "not-allowed" : "pointer",
+              }}
+            >
+              <div className="font-display font-bold text-base">{opt.label}</div>
+              <div
+                className="font-mono text-[10px] uppercase tracking-widest mt-0.5"
+                style={{ opacity: 0.7 }}
+              >
+                {opt.disabled ? "Need 5+ states with quiz history" : opt.desc}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Region sub-options */}
+      {source === "region" && (
+        <div className="mb-6 fade-in">
+          <div
+            className="font-mono text-[10px] uppercase tracking-widest mb-3"
+            style={{ color: "var(--dusty)" }}
+          >
+            Region
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {REGION_NAMES.map((r) => (
+              <button
+                key={r}
+                onClick={() => setRegion(r)}
+                className="py-3 rounded-xl font-mono text-xs font-bold transition uppercase tracking-widest"
+                style={{
+                  background: region === r ? "var(--rust)" : "var(--paper)",
+                  color: region === r ? "var(--cream)" : "var(--ink)",
+                  border: "2px solid var(--ink)",
+                }}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Start */}
+      <button
+        onClick={() => onStart({ cardCount, source, region })}
+        className="w-full rounded-2xl p-5 font-display font-bold text-xl transition active:scale-[0.98]"
+        style={{
+          background: "var(--gold)",
+          color: "var(--ink)",
+          border: "2px solid var(--ink)",
+          boxShadow: "4px 4px 0 var(--ink)",
+        }}
+      >
+        Start Matching →
+      </button>
+    </div>
+  );
+};
+
+// ─── MATCH GAME ─────────────────────────────────────────────────────────
+const MatchGame = ({ config, category, onExit }) => {
+  const [cards] = useState(() =>
+    buildMatchDeck(config.cardCount, config.source, config.region, category)
+  );
+  const [flippedIds, setFlippedIds] = useState([]);
+  const [matchedPairs, setMatchedPairs] = useState(new Set());
+  const [moves, setMoves] = useState(0);
+  const [time, setTime] = useState(0);
+  const [done, setDone] = useState(false);
+  const [lockBoard, setLockBoard] = useState(false);
+  const [animCards, setAnimCards] = useState({});
+
+  const pairCount = config.cardCount / 2;
+
+  // Timer
+  useEffect(() => {
+    if (done) return;
+    const t = setInterval(() => setTime((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [done]);
+
+  // Check for game complete
+  useEffect(() => {
+    if (matchedPairs.size === pairCount && pairCount > 0) {
+      setTimeout(() => setDone(true), 600);
+    }
+  }, [matchedPairs, pairCount]);
+
+  const handleCardClick = (card) => {
+    if (lockBoard || matchedPairs.has(card.pairId) || flippedIds.includes(card.id)) return;
+
+    const newFlipped = [...flippedIds, card.id];
+    setFlippedIds(newFlipped);
+
+    if (newFlipped.length === 2) {
+      setMoves((m) => m + 1);
+      setLockBoard(true);
+
+      const [first, second] = newFlipped.map((id) => cards.find((c) => c.id === id));
+
+      if (first.pairId === second.pairId) {
+        setAnimCards({ [first.id]: "match", [second.id]: "match" });
+        setTimeout(() => {
+          setMatchedPairs((s) => new Set(s).add(first.pairId));
+          setFlippedIds([]);
+          setLockBoard(false);
+          setAnimCards({});
+        }, 600);
+      } else {
+        setAnimCards({ [first.id]: "miss", [second.id]: "miss" });
+        setTimeout(() => {
+          setFlippedIds([]);
+          setLockBoard(false);
+          setAnimCards({});
+        }, 1000);
+      }
+    }
+  };
+
+  const formatTime = (s) =>
+    `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+  const gridCols = { 8: 4, 12: 4, 16: 4, 20: 5 }[config.cardCount] || 4;
+
+  const getRating = () => {
+    const ratio = moves / pairCount;
+    if (ratio <= 1.3) return "★ EXTRAORDINARY ★";
+    if (ratio <= 1.8) return "★ SHARP MIND ★";
+    if (ratio <= 2.5) return "★ SOLID ★";
+    return "★ KEEP PRACTICING ★";
+  };
+
+  if (done) {
+    return (
+      <div className="fade-in text-center py-8">
+        <div
+          className="font-mono text-[10px] uppercase tracking-[0.3em] mb-3"
+          style={{ color: "var(--dusty)" }}
+        >
+          All Pairs Found
+        </div>
+        <div
+          className="font-display font-black leading-none mb-2"
+          style={{
+            fontSize: "clamp(4rem, 20vw, 7rem)",
+            color: "var(--gold)",
+            fontVariationSettings: '"SOFT" 100, "WONK" 1',
+          }}
+        >
+          {moves}
+        </div>
+        <div
+          className="font-display italic text-xl mb-1"
+          style={{ color: "var(--ink)" }}
+        >
+          moves
+        </div>
+        <div
+          className="font-mono text-sm mb-6"
+          style={{ color: "var(--dusty)" }}
+        >
+          {formatTime(time)} elapsed · {pairCount} pairs
+        </div>
+        <div
+          className="flex justify-around py-3 px-4 mb-6 rounded-2xl"
+          style={{ background: "rgba(26,37,55,0.05)" }}
+        >
+          <Stat label="Moves" value={moves} />
+          <div style={{ width: 1, background: "rgba(26,37,55,0.1)" }} />
+          <Stat label="Time" value={formatTime(time)} tone="gold" />
+          <div style={{ width: 1, background: "rgba(26,37,55,0.1)" }} />
+          <Stat label="Pairs" value={pairCount} tone="sage" />
+        </div>
+        <div className="inline-block px-4 py-2 stamp font-mono text-xs mb-8">
+          {getRating()}
+        </div>
+        <div className="space-y-3">
+          <button
+            onClick={() => onExit("restart")}
+            className="w-full rounded-2xl p-4 font-display font-bold text-lg"
+            style={{
+              background: "var(--gold)",
+              color: "var(--ink)",
+              border: "2px solid var(--ink)",
+              boxShadow: "3px 3px 0 var(--ink)",
+            }}
+          >
+            Play Again
+          </button>
+          <button
+            onClick={() => onExit("config")}
+            className="w-full rounded-2xl p-4 font-mono text-xs uppercase tracking-widest"
+            style={{
+              background: "transparent",
+              color: "var(--ink)",
+              border: "2px solid var(--ink)",
+            }}
+          >
+            Change Settings
+          </button>
+          <button
+            onClick={() => onExit("home")}
+            className="w-full rounded-2xl p-4 font-mono text-xs uppercase tracking-widest"
+            style={{
+              background: "transparent",
+              color: "var(--ink)",
+              border: "2px solid rgba(26,37,55,0.3)",
+            }}
+          >
+            Back to Menu
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fade-in">
+      <div className="flex items-center justify-between mb-4">
+        <BackBtn onClick={() => onExit("home")} />
+        <div className="flex gap-2">
+          <div
+            className="font-mono text-xs px-3 py-1.5 rounded-full"
+            style={{ background: "rgba(26,37,55,0.08)", color: "var(--ink)" }}
+          >
+            {moves} moves
+          </div>
+          <div
+            className="font-mono text-xs px-3 py-1.5 rounded-full font-bold"
+            style={{ background: "var(--gold)", color: "var(--ink)" }}
+          >
+            {formatTime(time)}
+          </div>
+        </div>
+      </div>
+
+      {/* Progress */}
+      <div
+        className="h-1 rounded-full mb-4 overflow-hidden"
+        style={{ background: "rgba(26,37,55,0.1)" }}
+      >
+        <div
+          className="h-full transition-all duration-500"
+          style={{
+            width: `${(matchedPairs.size / pairCount) * 100}%`,
+            background: "var(--sage)",
+          }}
+        />
+      </div>
+
+      <div
+        className="grid gap-2"
+        style={{ gridTemplateColumns: `repeat(${gridCols}, 1fr)` }}
+      >
+        {cards.map((card) => {
+          const isFlipped =
+            flippedIds.includes(card.id) || matchedPairs.has(card.pairId);
+          const isMatched = matchedPairs.has(card.pairId);
+          const anim = animCards[card.id];
+
+          return (
+            <div
+              key={card.id}
+              onClick={() => handleCardClick(card)}
+              className={
+                anim === "match" ? "pop" : anim === "miss" ? "shake" : ""
+              }
+              style={{
+                perspective: "600px",
+                aspectRatio: "3/4",
+                cursor: isMatched ? "default" : "pointer",
+              }}
+            >
+              <div
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  height: "100%",
+                  transformStyle: "preserve-3d",
+                  transition: "transform 0.4s ease",
+                  transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
+                }}
+              >
+                {/* Face down */}
+                <div
+                  className="rounded-xl flex items-center justify-center"
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    backfaceVisibility: "hidden",
+                    WebkitBackfaceVisibility: "hidden",
+                    background: "var(--paper)",
+                    border: "2px solid var(--ink)",
+                    boxShadow: "2px 2px 0 var(--ink)",
+                  }}
+                >
+                  <span
+                    className="font-display text-xl"
+                    style={{ color: "var(--rust)", opacity: 0.3 }}
+                  >
+                    ★
+                  </span>
+                </div>
+
+                {/* Face up */}
+                <div
+                  className="rounded-xl flex flex-col items-center justify-center p-1.5"
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    backfaceVisibility: "hidden",
+                    WebkitBackfaceVisibility: "hidden",
+                    transform: "rotateY(180deg)",
+                    background:
+                      card.type === "state"
+                        ? isMatched
+                          ? "rgba(107,142,111,0.15)"
+                          : "var(--paper)"
+                        : isMatched
+                        ? "rgba(107,142,111,0.9)"
+                        : "var(--ink)",
+                    border: `2px solid ${
+                      isMatched ? "var(--sage)" : "var(--ink)"
+                    }`,
+                  }}
+                >
+                  <div
+                    className="font-mono text-center leading-snug"
+                    style={{
+                      fontSize: "clamp(0.45rem, 1.8vw, 0.6rem)",
+                      letterSpacing: "0.05em",
+                      textTransform: "uppercase",
+                      color:
+                        card.type === "state"
+                          ? "var(--dusty)"
+                          : isMatched
+                          ? "var(--cream)"
+                          : "var(--gold)",
+                      marginBottom: 2,
+                    }}
+                  >
+                    {card.label}
+                  </div>
+                  <div
+                    className="font-display font-bold text-center leading-tight"
+                    style={{
+                      fontSize: "clamp(0.6rem, 2.8vw, 0.9rem)",
+                      color:
+                        card.type === "state" ? "var(--ink)" : "var(--cream)",
+                    }}
+                  >
+                    {card.text}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -1420,11 +2021,13 @@ const Splash = ({ onDone }) => {
 
 // ─── MAIN APP ────────────────────────────────────────────────────────────
 export default function App() {
-  const [screen, setScreen] = useState("splash"); // splash | home | quiz | type | speed | study | results
+  const [screen, setScreen] = useState("splash"); // splash | home | quiz | type | speed | study | matchConfig | match | results
   const [lastMode, setLastMode] = useState(null);
   const [result, setResult] = useState(null);
   const [category, setCategory] = useState("capitals"); // capitals | abbreviations
   const [direction, setDirection] = useState("forward"); // forward | reverse
+  const [matchConfig, setMatchConfig] = useState(null);
+  const [matchKey, setMatchKey] = useState(0);
   const [stats, setStats] = useState({
     played: 0,
     correct: 0,
@@ -1486,6 +2089,7 @@ export default function App() {
               if (id === "type") setScreen("type");
               if (id === "speed") setScreen("speed");
               if (id === "study") setScreen("study");
+              if (id === "match") setScreen("matchConfig");
             }}
           />
         )}
@@ -1499,6 +2103,29 @@ export default function App() {
           <Speed onExit={handleExit("speed")} recordResult={recordResult} {...modeProps} />
         )}
         {screen === "study" && <Study onExit={handleExit("study")} {...modeProps} />}
+        {screen === "matchConfig" && (
+          <MatchConfig
+            category={category}
+            onBack={goHome}
+            onStart={(cfg) => {
+              setMatchConfig(cfg);
+              setMatchKey((k) => k + 1);
+              setScreen("match");
+            }}
+          />
+        )}
+        {screen === "match" && matchConfig && (
+          <MatchGame
+            key={matchKey}
+            config={matchConfig}
+            category={category}
+            onExit={(action) => {
+              if (action === "restart") setMatchKey((k) => k + 1);
+              else if (action === "config") setScreen("matchConfig");
+              else goHome();
+            }}
+          />
+        )}
         {screen === "results" && result && (
           <Results
             result={result}
