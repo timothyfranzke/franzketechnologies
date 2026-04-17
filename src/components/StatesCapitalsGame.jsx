@@ -312,6 +312,13 @@ const Home = ({ onPick, stats, category, setCategory, direction, setDirection })
       icon: "⬡",
       color: "var(--gold)",
     },
+    {
+      id: "escape",
+      title: "Escape",
+      desc: "Crack the 4-digit code to break free.",
+      icon: "⚿",
+      color: "var(--deep)",
+    },
   ];
 
   const forwardLabel = category === "abbreviations" ? "State → Abbr" : "State → Capital";
@@ -1964,6 +1971,628 @@ const MatchGame = ({ config, category, onExit }) => {
   );
 };
 
+// ─── ESCAPE CONFIG ──────────────────────────────────────────────────────
+const EscapeConfig = ({ category, direction, onStart, onBack }) => {
+  const [retries, setRetries] = useState(3);
+  const [timed, setTimed] = useState(false);
+  const [source, setSource] = useState("random");
+  const [region, setRegion] = useState("South");
+  const hasHistory = statsStore.hasEnoughHistory(5);
+
+  const catLabel = category === "abbreviations" ? "abbreviations" : "capitals";
+
+  return (
+    <div className="slide-up">
+      <div className="flex items-center justify-between mb-6">
+        <BackBtn onClick={onBack} />
+        <div
+          className="font-mono text-xs px-3 py-1.5 rounded-full font-bold"
+          style={{ background: "var(--deep)", color: "var(--cream)" }}
+        >
+          Escape
+        </div>
+      </div>
+
+      <div className="text-center mb-8">
+        <div
+          className="font-mono text-[10px] uppercase tracking-[0.3em] mb-2"
+          style={{ color: "var(--dusty)" }}
+        >
+          Escape Room
+        </div>
+        <h2
+          className="font-display font-black text-3xl leading-tight mb-2"
+          style={{ color: "var(--ink)", fontVariationSettings: '"SOFT" 100, "WONK" 1' }}
+        >
+          Crack the Code
+        </h2>
+        <div className="font-body text-sm" style={{ color: "var(--dusty)" }}>
+          Answer 4 questions to build a {catLabel} code
+        </div>
+      </div>
+
+      {/* Retries */}
+      <div className="mb-6">
+        <div
+          className="font-mono text-[10px] uppercase tracking-widest mb-3"
+          style={{ color: "var(--dusty)" }}
+        >
+          Retries
+        </div>
+        <div className="flex gap-2">
+          {[1, 2, 3, Infinity].map((n) => (
+            <button
+              key={n}
+              onClick={() => setRetries(n)}
+              className="flex-1 py-3 rounded-xl font-mono text-sm font-bold transition"
+              style={{
+                background: retries === n ? "var(--ink)" : "var(--paper)",
+                color: retries === n ? "var(--cream)" : "var(--ink)",
+                border: "2px solid var(--ink)",
+              }}
+            >
+              {n === Infinity ? "∞" : n}
+            </button>
+          ))}
+        </div>
+        <div
+          className="font-mono text-[10px] mt-1 text-center"
+          style={{ color: "var(--dusty)" }}
+        >
+          {retries === Infinity ? "unlimited attempts" : `${retries + 1} total attempts`}
+        </div>
+      </div>
+
+      {/* Timer */}
+      <div className="mb-6">
+        <div
+          className="font-mono text-[10px] uppercase tracking-widest mb-3"
+          style={{ color: "var(--dusty)" }}
+        >
+          Timer
+        </div>
+        <div className="flex gap-2">
+          {[
+            { id: false, label: "Off" },
+            { id: true, label: "5:00" },
+          ].map((opt) => (
+            <button
+              key={String(opt.id)}
+              onClick={() => setTimed(opt.id)}
+              className="flex-1 py-3 rounded-xl font-mono text-sm font-bold transition"
+              style={{
+                background: timed === opt.id ? "var(--ink)" : "var(--paper)",
+                color: timed === opt.id ? "var(--cream)" : "var(--ink)",
+                border: "2px solid var(--ink)",
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Source */}
+      <div className="mb-6">
+        <div
+          className="font-mono text-[10px] uppercase tracking-widest mb-3"
+          style={{ color: "var(--dusty)" }}
+        >
+          Card Source
+        </div>
+        <div className="space-y-2">
+          {[
+            { id: "random", label: "Random", desc: "Random states from all 50" },
+            { id: "region", label: "By Region", desc: "Focus on a specific region" },
+            { id: "weak", label: "Weak Areas", desc: "States you struggle with most", disabled: !hasHistory },
+          ].map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => !opt.disabled && setSource(opt.id)}
+              className="w-full text-left rounded-xl p-4 transition"
+              style={{
+                background: source === opt.id ? "var(--ink)" : "var(--paper)",
+                color: source === opt.id ? "var(--cream)" : "var(--ink)",
+                border: "2px solid var(--ink)",
+                opacity: opt.disabled ? 0.35 : 1,
+                cursor: opt.disabled ? "not-allowed" : "pointer",
+              }}
+            >
+              <div className="font-display font-bold text-base">{opt.label}</div>
+              <div
+                className="font-mono text-[10px] uppercase tracking-widest mt-0.5"
+                style={{ opacity: 0.7 }}
+              >
+                {opt.disabled ? "Need 5+ states with quiz history" : opt.desc}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Region sub-options */}
+      {source === "region" && (
+        <div className="mb-6 fade-in">
+          <div
+            className="font-mono text-[10px] uppercase tracking-widest mb-3"
+            style={{ color: "var(--dusty)" }}
+          >
+            Region
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {REGION_NAMES.map((r) => (
+              <button
+                key={r}
+                onClick={() => setRegion(r)}
+                className="py-3 rounded-xl font-mono text-xs font-bold transition uppercase tracking-widest"
+                style={{
+                  background: region === r ? "var(--rust)" : "var(--paper)",
+                  color: region === r ? "var(--cream)" : "var(--ink)",
+                  border: "2px solid var(--ink)",
+                }}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Start */}
+      <button
+        onClick={() => onStart({ retries, timed, source, region })}
+        className="w-full rounded-2xl p-5 font-display font-bold text-xl transition active:scale-[0.98]"
+        style={{
+          background: "var(--deep)",
+          color: "var(--cream)",
+          border: "2px solid var(--ink)",
+          boxShadow: "4px 4px 0 var(--ink)",
+        }}
+      >
+        Start Escape →
+      </button>
+    </div>
+  );
+};
+
+// ─── ESCAPE GAME ────────────────────────────────────────────────────────
+const buildEscapePuzzle = (source, region, category, direction) => {
+  let pool;
+  if (source === "region") {
+    pool = STATES.filter((s) => s.r === region);
+    if (pool.length < 4) {
+      const extras = shuffle(STATES.filter((s) => s.r !== region));
+      pool = [...pool, ...extras.slice(0, 4 - pool.length)];
+    }
+  } else if (source === "weak") {
+    const weakNames = statsStore.getWeakest(4);
+    pool = weakNames.map((name) => STATES.find((s) => s.s === name)).filter(Boolean);
+    if (pool.length < 4) {
+      const usedNames = new Set(pool.map((s) => s.s));
+      const extras = shuffle(STATES.filter((s) => !usedNames.has(s.s)));
+      pool = [...pool, ...extras.slice(0, 4 - pool.length)];
+    }
+  } else {
+    pool = [...STATES];
+  }
+
+  const selected = shuffle(pool).slice(0, 4);
+
+  return selected.map((state) => {
+    const qa = getQA(state, category, direction);
+    const distractors = getDistractors(state, category, direction);
+    const allAnswers = shuffle([qa.answer, ...distractors]);
+
+    // Assign unique random digits (0-9) to each option
+    const digitPool = shuffle([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    const options = allAnswers.map((text, i) => ({
+      text,
+      digit: digitPool[i],
+      isCorrect: text === qa.answer,
+    }));
+
+    const correctDigit = options.find((o) => o.isCorrect).digit;
+
+    return {
+      state,
+      question: qa.question,
+      qLabel: qa.qLabel,
+      aLabel: qa.aLabel,
+      options,
+      correctDigit,
+    };
+  });
+};
+
+const EscapeGame = ({ config, category, direction, onExit }) => {
+  const [puzzle] = useState(() =>
+    buildEscapePuzzle(config.source, config.region, category, direction)
+  );
+  const [selections, setSelections] = useState([null, null, null, null]);
+  const [attempt, setAttempt] = useState(1);
+  const [feedback, setFeedback] = useState(null); // array of "green" | "white" per question
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [done, setDone] = useState(false);
+  const [escaped, setEscaped] = useState(false);
+  const [time, setTime] = useState(config.timed ? 300 : 0);
+  const [statsRecorded, setStatsRecorded] = useState(false);
+  const maxAttempts = config.retries === Infinity ? Infinity : config.retries + 1;
+
+  // Timer (pauses during feedback)
+  const [timerPaused, setTimerPaused] = useState(false);
+  useEffect(() => {
+    if (!config.timed || done) return;
+    if (timerPaused) return;
+    if (time <= 0) {
+      setDone(true);
+      setEscaped(false);
+      return;
+    }
+    const t = setTimeout(() => setTime((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [time, done, config.timed, timerPaused]);
+
+  const formatTime = (s) =>
+    `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+  const selectOption = (qIdx, optIdx) => {
+    if (done) return;
+    setSelections((prev) => {
+      const next = [...prev];
+      next[qIdx] = optIdx;
+      return next;
+    });
+    // Clear feedback when changing answers
+    if (showFeedback) setShowFeedback(false);
+  };
+
+  const allAnswered = selections.every((s) => s !== null);
+
+  const submitCode = () => {
+    if (!allAnswered || done) return;
+
+    const fb = puzzle.map((q, i) => {
+      const selectedOpt = q.options[selections[i]];
+      return selectedOpt.digit === q.correctDigit ? "green" : "white";
+    });
+
+    setFeedback(fb);
+    setShowFeedback(true);
+
+    // Record stats on first attempt only
+    if (!statsRecorded) {
+      puzzle.forEach((q, i) => {
+        const correct = fb[i] === "green";
+        statsStore.record(q.state.s, correct);
+      });
+      setStatsRecorded(true);
+    }
+
+    // Pause timer briefly
+    if (config.timed) {
+      setTimerPaused(true);
+      setTimeout(() => setTimerPaused(false), 1000);
+    }
+
+    if (fb.every((f) => f === "green")) {
+      setTimeout(() => {
+        setDone(true);
+        setEscaped(true);
+      }, 600);
+    } else if (attempt >= maxAttempts) {
+      setTimeout(() => {
+        setDone(true);
+        setEscaped(false);
+      }, 1000);
+    } else {
+      setAttempt((a) => a + 1);
+    }
+  };
+
+  const getCode = () =>
+    puzzle.map((q, i) =>
+      selections[i] !== null ? q.options[selections[i]].digit : null
+    );
+
+  const code = getCode();
+
+  const getRating = () => {
+    if (attempt === 1) return "★ MASTERMIND ★";
+    if (attempt === 2) return "★ SHARP ★";
+    if (attempt === 3) return "★ SOLID ★";
+    return "★ PERSISTENT ★";
+  };
+
+  // End screen
+  if (done) {
+    const elapsed = config.timed ? 300 - time : null;
+
+    return (
+      <div className="fade-in text-center py-8">
+        <div
+          className="font-mono text-[10px] uppercase tracking-[0.3em] mb-3"
+          style={{ color: "var(--dusty)" }}
+        >
+          {escaped ? "Code Accepted" : "Access Denied"}
+        </div>
+        <h2
+          className="font-display font-black leading-tight mb-4"
+          style={{
+            fontSize: "clamp(2.5rem, 12vw, 4.5rem)",
+            color: escaped ? "var(--sage)" : "var(--rust)",
+            fontVariationSettings: '"SOFT" 100, "WONK" 1',
+          }}
+        >
+          {escaped ? "Escaped!" : "Locked Out"}
+        </h2>
+
+        {escaped && (
+          <div className="inline-block px-4 py-2 stamp font-mono text-xs mb-6">
+            {getRating()}
+          </div>
+        )}
+
+        <div
+          className="flex justify-around py-3 px-4 mb-4 rounded-2xl"
+          style={{ background: "rgba(26,37,55,0.05)" }}
+        >
+          <Stat label="Attempts" value={attempt} />
+          {elapsed !== null && (
+            <>
+              <div style={{ width: 1, background: "rgba(26,37,55,0.1)" }} />
+              <Stat label="Time" value={formatTime(elapsed)} tone="gold" />
+            </>
+          )}
+        </div>
+
+        {/* Show correct answers on failure */}
+        {!escaped && (
+          <div className="mb-6 text-left">
+            <div
+              className="font-mono text-[10px] uppercase tracking-widest mb-3 text-center"
+              style={{ color: "var(--dusty)" }}
+            >
+              Correct Answers
+            </div>
+            <div className="space-y-2">
+              {puzzle.map((q, i) => {
+                const correctOpt = q.options.find((o) => o.isCorrect);
+                return (
+                  <div
+                    key={i}
+                    className="rounded-xl p-3 flex items-center gap-3"
+                    style={{ background: "rgba(26,37,55,0.05)" }}
+                  >
+                    <div
+                      className="font-mono text-lg font-bold w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: "var(--sage)", color: "var(--cream)" }}
+                    >
+                      {correctOpt.digit}
+                    </div>
+                    <div>
+                      <div
+                        className="font-display font-bold text-sm"
+                        style={{ color: "var(--ink)" }}
+                      >
+                        {q.question}
+                      </div>
+                      <div
+                        className="font-mono text-[10px] uppercase tracking-widest"
+                        style={{ color: "var(--dusty)" }}
+                      >
+                        {correctOpt.text}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div
+              className="font-mono text-xs text-center mt-3 font-bold tracking-widest"
+              style={{ color: "var(--ink)" }}
+            >
+              Code: {puzzle.map((q) => q.correctDigit).join("")}
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <button
+            onClick={() => onExit("restart")}
+            className="w-full rounded-2xl p-4 font-display font-bold text-lg"
+            style={{
+              background: "var(--deep)",
+              color: "var(--cream)",
+              border: "2px solid var(--ink)",
+              boxShadow: "3px 3px 0 var(--ink)",
+            }}
+          >
+            Play Again
+          </button>
+          <button
+            onClick={() => onExit("config")}
+            className="w-full rounded-2xl p-4 font-mono text-xs uppercase tracking-widest"
+            style={{
+              background: "transparent",
+              color: "var(--ink)",
+              border: "2px solid var(--ink)",
+            }}
+          >
+            Change Settings
+          </button>
+          <button
+            onClick={() => onExit("home")}
+            className="w-full rounded-2xl p-4 font-mono text-xs uppercase tracking-widest"
+            style={{
+              background: "transparent",
+              color: "var(--ink)",
+              border: "2px solid rgba(26,37,55,0.3)",
+            }}
+          >
+            Back to Menu
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fade-in">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <BackBtn onClick={() => onExit("home")} />
+        <div className="flex gap-2">
+          <div
+            className="font-mono text-xs px-3 py-1.5 rounded-full"
+            style={{ background: "rgba(26,37,55,0.08)", color: "var(--ink)" }}
+          >
+            {maxAttempts === Infinity
+              ? `Attempt ${attempt}`
+              : `Attempt ${attempt}/${maxAttempts}`}
+          </div>
+          {config.timed && (
+            <div
+              className="font-mono text-xs px-3 py-1.5 rounded-full font-bold"
+              style={{
+                background: time <= 60 ? "var(--rust)" : "var(--deep)",
+                color: "var(--cream)",
+              }}
+            >
+              {formatTime(time)}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Questions */}
+      <div className="space-y-4 mb-6">
+        {puzzle.map((q, qIdx) => {
+          const dotColor =
+            showFeedback && feedback
+              ? feedback[qIdx] === "green"
+                ? "var(--sage)"
+                : "rgba(26,37,55,0.2)"
+              : null;
+
+          return (
+            <div
+              key={qIdx}
+              className="rounded-2xl p-4"
+              style={{
+                background: "var(--paper)",
+                border: `2px solid ${dotColor || "var(--ink)"}`,
+                boxShadow: dotColor
+                  ? `0 0 0 2px ${dotColor}`
+                  : "2px 2px 0 var(--ink)",
+              }}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div
+                  className="font-mono text-[10px] uppercase tracking-widest"
+                  style={{ color: "var(--dusty)" }}
+                >
+                  {q.aLabel} of
+                </div>
+                <div
+                  className="font-display font-bold text-base"
+                  style={{ color: "var(--ink)" }}
+                >
+                  {q.question}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {q.options.map((opt, oIdx) => {
+                  const isSelected = selections[qIdx] === oIdx;
+                  return (
+                    <button
+                      key={oIdx}
+                      onClick={() => selectOption(qIdx, oIdx)}
+                      className="rounded-xl py-2.5 px-3 font-body text-sm transition active:scale-[0.97] text-left flex items-center gap-2"
+                      style={{
+                        background: isSelected ? "var(--ink)" : "transparent",
+                        color: isSelected ? "var(--cream)" : "var(--ink)",
+                        border: `2px solid ${isSelected ? "var(--ink)" : "rgba(26,37,55,0.2)"}`,
+                      }}
+                    >
+                      <span
+                        className="font-mono text-xs font-bold w-6 h-6 rounded flex items-center justify-center flex-shrink-0"
+                        style={{
+                          background: isSelected
+                            ? "rgba(255,255,255,0.2)"
+                            : "rgba(26,37,55,0.08)",
+                        }}
+                      >
+                        {opt.digit}
+                      </span>
+                      <span className="leading-tight">{opt.text}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Code display */}
+      <div className="flex justify-center gap-3 mb-4">
+        {code.map((digit, i) => {
+          const dotColor =
+            showFeedback && feedback
+              ? feedback[i] === "green"
+                ? "var(--sage)"
+                : "var(--rust)"
+              : null;
+
+          return (
+            <div
+              key={i}
+              className={`w-14 h-16 rounded-xl flex flex-col items-center justify-center font-mono font-bold text-2xl transition-all ${
+                showFeedback && feedback && feedback[i] === "green" ? "pop" : ""
+              } ${showFeedback && feedback && feedback[i] === "white" ? "shake" : ""}`}
+              style={{
+                background: dotColor || (digit !== null ? "var(--ink)" : "rgba(26,37,55,0.08)"),
+                color: digit !== null ? "var(--cream)" : "var(--dusty)",
+                border: `2px solid ${dotColor || "var(--ink)"}`,
+              }}
+            >
+              <span>{digit !== null ? digit : "?"}</span>
+              {showFeedback && feedback && (
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background:
+                      feedback[i] === "green" ? "var(--cream)" : "var(--cream)",
+                    opacity: feedback[i] === "green" ? 1 : 0.4,
+                    marginTop: 2,
+                  }}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Submit */}
+      <button
+        onClick={submitCode}
+        disabled={!allAnswered}
+        className="w-full rounded-2xl p-4 font-display font-bold text-lg transition active:scale-[0.98]"
+        style={{
+          background: allAnswered ? "var(--deep)" : "rgba(26,37,55,0.15)",
+          color: allAnswered ? "var(--cream)" : "var(--dusty)",
+          border: "2px solid var(--ink)",
+          boxShadow: allAnswered ? "3px 3px 0 var(--ink)" : "none",
+        }}
+      >
+        Try Code →
+      </button>
+    </div>
+  );
+};
+
 // ─── RESULTS ─────────────────────────────────────────────────────────────
 const Results = ({ result, onPlayAgain, onHome }) => {
   const pct = Math.round((result.correct / result.total) * 100);
@@ -2120,6 +2749,8 @@ export default function App() {
   const [direction, setDirection] = useState("forward"); // forward | reverse
   const [matchConfig, setMatchConfig] = useState(null);
   const [matchKey, setMatchKey] = useState(0);
+  const [escapeConfig, setEscapeConfig] = useState(null);
+  const [escapeKey, setEscapeKey] = useState(0);
   const [stats, setStats] = useState({
     played: 0,
     correct: 0,
@@ -2182,6 +2813,7 @@ export default function App() {
               if (id === "speed") setScreen("speed");
               if (id === "study") setScreen("study");
               if (id === "match") setScreen("matchConfig");
+              if (id === "escape") setScreen("escapeConfig");
             }}
           />
         )}
@@ -2214,6 +2846,31 @@ export default function App() {
             onExit={(action) => {
               if (action === "restart") setMatchKey((k) => k + 1);
               else if (action === "config") setScreen("matchConfig");
+              else goHome();
+            }}
+          />
+        )}
+        {screen === "escapeConfig" && (
+          <EscapeConfig
+            category={category}
+            direction={direction}
+            onBack={goHome}
+            onStart={(cfg) => {
+              setEscapeConfig(cfg);
+              setEscapeKey((k) => k + 1);
+              setScreen("escape");
+            }}
+          />
+        )}
+        {screen === "escape" && escapeConfig && (
+          <EscapeGame
+            key={escapeKey}
+            config={escapeConfig}
+            category={category}
+            direction={direction}
+            onExit={(action) => {
+              if (action === "restart") setEscapeKey((k) => k + 1);
+              else if (action === "config") setScreen("escapeConfig");
               else goHome();
             }}
           />
