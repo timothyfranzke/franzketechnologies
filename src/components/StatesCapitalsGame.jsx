@@ -1,4 +1,69 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { initializeApp } from "firebase/app";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  limit,
+  serverTimestamp,
+} from "firebase/firestore";
+
+// ─── FIREBASE ───────────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+  authDomain: import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.PUBLIC_FIREBASE_APP_ID,
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const NICKNAME_KEY = "nifty-fifty-nickname";
+
+const leaderboard = {
+  async submit(name, score, category) {
+    await addDoc(collection(db, "speed-scores"), {
+      name,
+      score,
+      category,
+      timestamp: serverTimestamp(),
+    });
+  },
+  async getTop(category, max = 20) {
+    const q = query(
+      collection(db, "speed-scores"),
+      where("category", "==", category),
+      orderBy("score", "desc"),
+      orderBy("timestamp", "asc"),
+      limit(max)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  },
+  async getRank(score, category) {
+    const q = query(
+      collection(db, "speed-scores"),
+      where("category", "==", category),
+      where("score", ">", score)
+    );
+    const snap = await getDocs(q);
+    return snap.size + 1;
+  },
+  getNickname() {
+    try { return localStorage.getItem(NICKNAME_KEY) || ""; }
+    catch { return ""; }
+  },
+  setNickname(name) {
+    localStorage.setItem(NICKNAME_KEY, name);
+  },
+};
 
 // ─── DATA ────────────────────────────────────────────────────────────────
 const STATES = [
@@ -468,8 +533,21 @@ const Home = ({ onPick, stats, category, setCategory, direction, setDirection })
         ))}
       </div>
 
+      {/* Leaderboard link */}
+      <button
+        onClick={() => onPick("leaderboard")}
+        className="w-full mt-6 py-3 rounded-2xl font-mono text-xs uppercase tracking-widest transition hover:opacity-80 flex items-center justify-center gap-2"
+        style={{
+          background: "rgba(26,37,55,0.05)",
+          color: "var(--ink)",
+          border: "2px solid rgba(26,37,55,0.12)",
+        }}
+      >
+        <span style={{ fontSize: "1rem" }}>🏆</span> Leaderboard
+      </button>
+
       <div
-        className="text-center mt-8 font-mono text-[10px] uppercase tracking-widest opacity-40"
+        className="text-center mt-4 font-mono text-[10px] uppercase tracking-widest opacity-40"
         style={{ color: "var(--ink)" }}
       >
         50 states · 50 capitals · 1 goal
@@ -835,7 +913,41 @@ const Speed = ({ onExit, recordResult, category, direction: dir }) => {
 
   const aLabel = category === "abbreviations" ? "abbreviations" : "capitals";
 
+  // Leaderboard submission state
+  const [posted, setPosted] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [rank, setRank] = useState(null);
+  const [nickInput, setNickInput] = useState("");
+  const [showNickInput, setShowNickInput] = useState(false);
+
+  const handlePost = async (name) => {
+    if (posting || posted) return;
+    setPosting(true);
+    try {
+      leaderboard.setNickname(name);
+      await leaderboard.submit(name, score, category);
+      const r = await leaderboard.getRank(score, category);
+      setRank(r);
+      setPosted(true);
+    } catch (e) {
+      console.error("Leaderboard submit failed:", e);
+    }
+    setPosting(false);
+  };
+
+  const startPost = () => {
+    const existing = leaderboard.getNickname();
+    if (existing) {
+      handlePost(existing);
+    } else {
+      setShowNickInput(true);
+      setNickInput("");
+    }
+  };
+
   if (done) {
+    const catLabel = category === "abbreviations" ? "Abbreviations" : "Capitals";
+
     return (
       <div className="fade-in text-center py-8">
         <div
@@ -868,6 +980,100 @@ const Speed = ({ onExit, recordResult, category, direction: dir }) => {
             ? "★ SOLID ★"
             : "★ KEEP GOING ★"}
         </div>
+
+        {/* Leaderboard submit */}
+        {score > 0 && (
+          <div className="mb-6">
+            {posted ? (
+              <div className="fade-in">
+                <div
+                  className="rounded-2xl p-4 mb-2"
+                  style={{ background: "rgba(107,142,111,0.12)", border: "2px solid var(--sage)" }}
+                >
+                  <div
+                    className="font-mono text-xs uppercase tracking-widest"
+                    style={{ color: "var(--sage)" }}
+                  >
+                    ✓ Posted to Leaderboard
+                  </div>
+                  {rank && (
+                    <div
+                      className="font-display font-bold text-lg mt-1"
+                      style={{ color: "var(--ink)" }}
+                    >
+                      You're #{rank} on {catLabel}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : showNickInput ? (
+              <div className="fade-in">
+                <div
+                  className="rounded-2xl p-4"
+                  style={{ background: "var(--paper)", border: "2px solid var(--ink)" }}
+                >
+                  <div
+                    className="font-mono text-[10px] uppercase tracking-widest mb-3"
+                    style={{ color: "var(--dusty)" }}
+                  >
+                    Choose a Nickname
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={nickInput}
+                      onChange={(e) => setNickInput(e.target.value.slice(0, 15))}
+                      placeholder="Your name..."
+                      autoFocus
+                      className="flex-1 rounded-xl px-3 py-2 font-body text-sm outline-none"
+                      style={{
+                        background: "rgba(26,37,55,0.06)",
+                        color: "var(--ink)",
+                        border: "2px solid rgba(26,37,55,0.15)",
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && nickInput.trim().length >= 3)
+                          handlePost(nickInput.trim());
+                      }}
+                    />
+                    <button
+                      onClick={() => handlePost(nickInput.trim())}
+                      disabled={nickInput.trim().length < 3 || posting}
+                      className="rounded-xl px-4 py-2 font-mono text-xs uppercase tracking-widest font-bold transition"
+                      style={{
+                        background: nickInput.trim().length >= 3 ? "var(--ink)" : "rgba(26,37,55,0.1)",
+                        color: nickInput.trim().length >= 3 ? "var(--cream)" : "var(--dusty)",
+                      }}
+                    >
+                      {posting ? "..." : "Post"}
+                    </button>
+                  </div>
+                  <div
+                    className="font-mono text-[10px] mt-1"
+                    style={{ color: "var(--dusty)" }}
+                  >
+                    3-15 characters
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={startPost}
+                disabled={posting}
+                className="w-full rounded-2xl p-4 font-display font-bold text-lg transition active:scale-[0.98]"
+                style={{
+                  background: "var(--gold)",
+                  color: "var(--ink)",
+                  border: "2px solid var(--ink)",
+                  boxShadow: "3px 3px 0 var(--ink)",
+                }}
+              >
+                {posting ? "Posting..." : "Post to Leaderboard"}
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="space-y-3">
           <button
             onClick={() => {
@@ -876,6 +1082,9 @@ const Speed = ({ onExit, recordResult, category, direction: dir }) => {
               setTime(60);
               setScore(0);
               setDone(false);
+              setPosted(false);
+              setRank(null);
+              setShowNickInput(false);
             }}
             className="w-full rounded-2xl p-4 font-display font-bold text-lg"
             style={{
@@ -2667,6 +2876,243 @@ const Results = ({ result, onPlayAgain, onHome }) => {
   );
 };
 
+// ─── LEADERBOARD ────────────────────────────────────────────────────────
+const timeAgo = (timestamp) => {
+  if (!timestamp) return "";
+  const seconds = Math.floor((Date.now() - timestamp.toDate().getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+};
+
+const Leaderboard = ({ onBack }) => {
+  const [cat, setCat] = useState("capitals");
+  const [scores, setScores] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [nickname, setNickname] = useState(() => leaderboard.getNickname());
+  const [editingNick, setEditingNick] = useState(false);
+  const [nickInput, setNickInput] = useState(nickname);
+
+  const fetchScores = useCallback(async (category) => {
+    setLoading(true);
+    try {
+      const data = await leaderboard.getTop(category);
+      setScores(data);
+    } catch (e) {
+      console.error("Failed to fetch leaderboard:", e);
+      setScores([]);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchScores(cat);
+  }, [cat, fetchScores]);
+
+  const saveNickname = () => {
+    if (nickInput.trim().length >= 3) {
+      leaderboard.setNickname(nickInput.trim());
+      setNickname(nickInput.trim());
+      setEditingNick(false);
+    }
+  };
+
+  const rankColor = (i) => {
+    if (i === 0) return "var(--gold)";
+    if (i === 1) return "var(--dusty)";
+    if (i === 2) return "var(--rust)";
+    return "var(--ink)";
+  };
+
+  return (
+    <div className="slide-up">
+      <div className="flex items-center justify-between mb-6">
+        <BackBtn onClick={onBack} />
+        <div
+          className="font-mono text-xs px-3 py-1.5 rounded-full font-bold"
+          style={{ background: "var(--ink)", color: "var(--cream)" }}
+        >
+          Leaderboard
+        </div>
+      </div>
+
+      <div className="text-center mb-6">
+        <h2
+          className="font-display font-black text-3xl leading-tight mb-1"
+          style={{ color: "var(--ink)", fontVariationSettings: '"SOFT" 100, "WONK" 1' }}
+        >
+          60-Second Dash
+        </h2>
+        <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: "var(--dusty)" }}>
+          Top scores
+        </div>
+      </div>
+
+      {/* Category tabs */}
+      <div
+        className="flex rounded-full mb-6 overflow-hidden"
+        style={{ border: "2px solid var(--ink)" }}
+      >
+        {[
+          { id: "capitals", label: "Capitals" },
+          { id: "abbreviations", label: "Abbreviations" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setCat(tab.id)}
+            className="flex-1 py-2.5 font-mono text-xs uppercase tracking-widest transition-colors"
+            style={{
+              background: cat === tab.id ? "var(--ink)" : "transparent",
+              color: cat === tab.id ? "var(--cream)" : "var(--ink)",
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Scores list */}
+      {loading ? (
+        <div className="text-center py-12">
+          <div
+            className="font-mono text-xs uppercase tracking-widest"
+            style={{ color: "var(--dusty)" }}
+          >
+            Loading...
+          </div>
+        </div>
+      ) : scores.length === 0 ? (
+        <div className="text-center py-12">
+          <div
+            className="font-display text-4xl mb-3"
+            style={{ color: "var(--dusty)", opacity: 0.3 }}
+          >
+            🏆
+          </div>
+          <div
+            className="font-display font-bold text-lg mb-1"
+            style={{ color: "var(--ink)" }}
+          >
+            No scores yet
+          </div>
+          <div
+            className="font-mono text-[10px] uppercase tracking-widest"
+            style={{ color: "var(--dusty)" }}
+          >
+            Be the first! Play 60-Second Dash.
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {scores.map((entry, i) => {
+            const isYou = nickname && entry.name === nickname;
+            return (
+              <div
+                key={entry.id}
+                className="rounded-xl p-3 flex items-center gap-3 transition"
+                style={{
+                  background: isYou ? "rgba(217,164,65,0.1)" : "var(--paper)",
+                  border: `2px solid ${isYou ? "var(--gold)" : "rgba(26,37,55,0.1)"}`,
+                }}
+              >
+                <div
+                  className="font-mono text-sm font-bold w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: i < 3 ? rankColor(i) : "rgba(26,37,55,0.08)",
+                    color: i < 3 ? "var(--cream)" : "var(--ink)",
+                  }}
+                >
+                  {i + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div
+                    className="font-display font-bold text-sm truncate"
+                    style={{ color: "var(--ink)" }}
+                  >
+                    {entry.name}
+                    {isYou && (
+                      <span
+                        className="font-mono text-[10px] uppercase tracking-widest ml-2"
+                        style={{ color: "var(--gold)" }}
+                      >
+                        you
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    className="font-mono text-[10px] uppercase tracking-widest"
+                    style={{ color: "var(--dusty)" }}
+                  >
+                    {timeAgo(entry.timestamp)}
+                  </div>
+                </div>
+                <div
+                  className="font-display font-black text-2xl flex-shrink-0"
+                  style={{ color: rankColor(i) }}
+                >
+                  {entry.score}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Nickname management */}
+      <div className="mt-6 text-center">
+        {editingNick ? (
+          <div className="flex gap-2 justify-center">
+            <input
+              type="text"
+              value={nickInput}
+              onChange={(e) => setNickInput(e.target.value.slice(0, 15))}
+              autoFocus
+              className="rounded-xl px-3 py-2 font-body text-sm outline-none w-40"
+              style={{
+                background: "rgba(26,37,55,0.06)",
+                color: "var(--ink)",
+                border: "2px solid rgba(26,37,55,0.15)",
+              }}
+              onKeyDown={(e) => e.key === "Enter" && saveNickname()}
+            />
+            <button
+              onClick={saveNickname}
+              disabled={nickInput.trim().length < 3}
+              className="rounded-xl px-3 py-2 font-mono text-xs uppercase tracking-widest"
+              style={{
+                background: "var(--ink)",
+                color: "var(--cream)",
+              }}
+            >
+              Save
+            </button>
+            <button
+              onClick={() => { setEditingNick(false); setNickInput(nickname); }}
+              className="rounded-xl px-3 py-2 font-mono text-xs uppercase tracking-widest"
+              style={{ color: "var(--ink)", border: "2px solid rgba(26,37,55,0.15)" }}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setEditingNick(true)}
+            className="font-mono text-[10px] uppercase tracking-widest transition hover:opacity-70"
+            style={{ color: "var(--dusty)" }}
+          >
+            {nickname ? `Playing as "${nickname}" · Edit` : "Set Nickname"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ─── SPLASH SCREEN ──────────────────────────────────────────────────────
 const Splash = ({ onDone }) => {
   const [fading, setFading] = useState(false);
@@ -2814,6 +3260,7 @@ export default function App() {
               if (id === "study") setScreen("study");
               if (id === "match") setScreen("matchConfig");
               if (id === "escape") setScreen("escapeConfig");
+              if (id === "leaderboard") setScreen("leaderboard");
             }}
           />
         )}
@@ -2875,6 +3322,7 @@ export default function App() {
             }}
           />
         )}
+        {screen === "leaderboard" && <Leaderboard onBack={goHome} />}
         {screen === "results" && result && (
           <Results
             result={result}
