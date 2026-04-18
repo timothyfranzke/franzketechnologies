@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import filter from "leo-profanity";
 import { initializeApp } from "firebase/app";
 import {
   getFirestore,
@@ -1044,9 +1045,17 @@ const Speed = ({ onExit, recordResult, category, direction: dir, onViewLeaderboa
   const [rank, setRank] = useState(null);
   const [nickInput, setNickInput] = useState("");
   const [showNickInput, setShowNickInput] = useState(false);
+  const [profanityError, setProfanityError] = useState(false);
 
   const handlePost = async (name) => {
     if (posting || posted) return;
+    if (filter.check(name)) {
+      setProfanityError(true);
+      setShowNickInput(true);
+      setNickInput(name);
+      return;
+    }
+    setProfanityError(false);
     setPosting(true);
     try {
       leaderboard.setNickname(name);
@@ -1063,11 +1072,11 @@ const Speed = ({ onExit, recordResult, category, direction: dir, onViewLeaderboa
 
   const startPost = () => {
     const existing = leaderboard.getNickname();
-    if (existing) {
+    if (existing && !filter.check(existing)) {
       handlePost(existing);
     } else {
       setShowNickInput(true);
-      setNickInput("");
+      setNickInput(existing && filter.check(existing) ? "" : "");
     }
   };
 
@@ -1155,7 +1164,7 @@ const Speed = ({ onExit, recordResult, category, direction: dir, onViewLeaderboa
                     <input
                       type="text"
                       value={nickInput}
-                      onChange={(e) => setNickInput(e.target.value.slice(0, 15))}
+                      onChange={(e) => { setNickInput(e.target.value.slice(0, 15)); setProfanityError(false); }}
                       placeholder="Your name..."
                       autoFocus
                       className="flex-1 rounded-xl px-3 py-2 font-body text-sm outline-none"
@@ -1181,12 +1190,15 @@ const Speed = ({ onExit, recordResult, category, direction: dir, onViewLeaderboa
                       {posting ? "..." : "Post"}
                     </button>
                   </div>
-                  <div
-                    className="font-mono text-[10px] mt-1"
-                    style={{ color: "var(--dusty)" }}
-                  >
-                    3-15 characters
-                  </div>
+                  {profanityError ? (
+                    <div className="font-mono text-[10px] mt-1" style={{ color: "var(--rust)" }}>
+                      Please choose an appropriate nickname
+                    </div>
+                  ) : (
+                    <div className="font-mono text-[10px] mt-1" style={{ color: "var(--dusty)" }}>
+                      3-15 characters
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -3116,6 +3128,7 @@ const Leaderboard = ({ onBack }) => {
   const [nickname, setNickname] = useState(() => leaderboard.getNickname());
   const [editingNick, setEditingNick] = useState(false);
   const [nickInput, setNickInput] = useState(nickname);
+  const [nickError, setNickError] = useState(false);
 
   const fetchScores = useCallback(async (category) => {
     setLoading(true);
@@ -3152,11 +3165,16 @@ const Leaderboard = ({ onBack }) => {
   }, [cat, fetchScores]);
 
   const saveNickname = () => {
-    if (nickInput.trim().length >= 3) {
-      leaderboard.setNickname(nickInput.trim());
-      setNickname(nickInput.trim());
-      setEditingNick(false);
+    const name = nickInput.trim();
+    if (name.length < 3) return;
+    if (filter.check(name)) {
+      setNickError(true);
+      return;
     }
+    setNickError(false);
+    leaderboard.setNickname(name);
+    setNickname(name);
+    setEditingNick(false);
   };
 
   const rankColor = (i) => {
@@ -3319,39 +3337,46 @@ const Leaderboard = ({ onBack }) => {
       {/* Nickname management */}
       <div className="mt-6 text-center">
         {editingNick ? (
-          <div className="flex gap-2 justify-center">
-            <input
-              type="text"
-              value={nickInput}
-              onChange={(e) => setNickInput(e.target.value.slice(0, 15))}
-              autoFocus
-              className="rounded-xl px-3 py-2 font-body text-sm outline-none w-40"
-              style={{
-                background: "rgba(26,37,55,0.06)",
-                color: "var(--ink)",
-                border: "2px solid rgba(26,37,55,0.15)",
-              }}
-              onKeyDown={(e) => e.key === "Enter" && saveNickname()}
-            />
-            <button
-              onClick={saveNickname}
-              disabled={nickInput.trim().length < 3}
-              className="rounded-xl px-3 py-2 font-mono text-xs uppercase tracking-widest"
-              style={{
-                background: "var(--ink)",
-                color: "var(--cream)",
-              }}
-            >
-              Save
-            </button>
-            <button
-              onClick={() => { setEditingNick(false); setNickInput(nickname); }}
-              className="rounded-xl px-3 py-2 font-mono text-xs uppercase tracking-widest"
-              style={{ color: "var(--ink)", border: "2px solid rgba(26,37,55,0.15)" }}
-            >
-              Cancel
-            </button>
-          </div>
+          <>
+            <div className="flex gap-2 justify-center">
+              <input
+                type="text"
+                value={nickInput}
+                onChange={(e) => { setNickInput(e.target.value.slice(0, 15)); setNickError(false); }}
+                autoFocus
+                className="rounded-xl px-3 py-2 font-body text-sm outline-none w-40"
+                style={{
+                  background: "rgba(26,37,55,0.06)",
+                  color: "var(--ink)",
+                  border: "2px solid rgba(26,37,55,0.15)",
+                }}
+                onKeyDown={(e) => e.key === "Enter" && saveNickname()}
+              />
+              <button
+                onClick={saveNickname}
+                disabled={nickInput.trim().length < 3}
+                className="rounded-xl px-3 py-2 font-mono text-xs uppercase tracking-widest"
+                style={{
+                  background: "var(--ink)",
+                  color: "var(--cream)",
+                }}
+              >
+                Save
+              </button>
+              <button
+                onClick={() => { setEditingNick(false); setNickInput(nickname); setNickError(false); }}
+                className="rounded-xl px-3 py-2 font-mono text-xs uppercase tracking-widest"
+                style={{ color: "var(--ink)", border: "2px solid rgba(26,37,55,0.15)" }}
+              >
+                Cancel
+              </button>
+            </div>
+            {nickError && (
+              <div className="font-mono text-[10px] mt-1" style={{ color: "var(--rust)" }}>
+                Please choose an appropriate nickname
+              </div>
+            )}
+          </>
         ) : (
           <button
             onClick={() => setEditingNick(true)}

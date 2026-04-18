@@ -1,0 +1,175 @@
+---
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+const title = "Privacy Policy | Franzke Technologies";
+const description = "Privacy policy for Franzke Technologies — what data we collect and how it's used.";
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const ogImage = new URL('/og.png', Astro.site);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta name="generator" content={Astro.generator} />
+
+    <link rel="canonical" href={canonicalURL} />
+
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:site_name" content="Franzke Technologies" />
+    <meta property="og:image" content={ogImage} />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <title>{title}</title>
+  </head>
+  <body class="flex min-h-screen flex-col bg-white text-slate-900">
+    <!-- Animated background shapes -->
+    <div class="bg-shapes-container">
+      <div class="bg-shape bg-shape-1"></div>
+      <div class="bg-shape bg-shape-2"></div>
+      <div class="bg-shape bg-shape-3"></div>
+      <div class="bg-shape bg-shape-4"></div>
+    </div>
+
+    <div class="hero-section">
+      <Header variant="dark" />
+
+      <!-- Hero -->
+      <section class="relative z-[2] py-16 sm:py-24">
+        <div class="mx-auto max-w-6xl px-4 sm:px-6">
+          <div class="animate-on-scroll slide-from-bottom text-center">
+            <p class="section-label">Legal</p>
+            <h1 class="mt-4 text-3xl font-bold sm:text-4xl lg:text-5xl">
+              <span class="bg-gradient-to-r from-teal-500 to-white bg-clip-text text-transparent">Privacy Policy</span>
+            </h1>
+            <p class="mx-auto mt-6 max-w-2xl text-lg text-slate-300">
+              Effective April 18, 2026
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Content -->
+      <section class="relative z-[2] py-16 sm:py-20">
+        <div class="mx-auto max-w-3xl px-4 sm:px-6">
+          <div class="animate-on-scroll slide-from-bottom service-card rounded-2xl p-[2px]">
+            <div class="service-card-inner rounded-2xl bg-navy-900/80 backdrop-blur-sm p-8 sm:p-12">
+              <div class="prose prose-invert max-w-none prose-headings:text-white prose-headings:font-semibold prose-p:text-slate-300 prose-a:text-electric-400 prose-a:no-underline hover:prose-a:underline prose-li:text-slate-300 prose-strong:text-white prose-code:text-electric-400">
+
+                <p>
+                  This site is operated by Timothy Franzke / Franzke Technologies. I want to be upfront about what data this site collects, why, and what happens with it. The short version: I use basic analytics to see how the site is doing, the Nifty Fifty game stores your progress locally, and I don't sell or share your personal data with anyone.
+                </p>
+
+                <h2>What data is collected</h2>
+
+                <h3>Google Analytics</h3>
+                <p>
+                  This site uses Google Analytics (GA4) to understand how visitors use the site — things like which pages get visited, how long people stay, and what devices they're using. Google Analytics collects this data through cookies and sends it to Google's servers.
+                </p>
+                <p>The cookies set by Google Analytics include:</p>
+                <ul>
+                  <li><strong><code>_ga</code></strong> — Used to distinguish unique visitors. Expires after 2 years.</li>
+                  <li><strong><code>_ga_&lt;ID&gt;</code></strong> — Used to maintain session state. Expires after 2 years.</li>
+                </ul>
+                <p>
+                  Google Analytics collects information like your IP address (which Google anonymizes), browser type, operating system, screen resolution, and general geographic location. I don't use this data to identify individual visitors — it's aggregate-level stuff to help me understand what's working on the site.
+                </p>
+                <p>
+                  You can opt out of Google Analytics by installing the <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener noreferrer">Google Analytics Opt-out Browser Add-on</a>.
+                </p>
+
+                <h3>Nifty Fifty game (localStorage)</h3>
+                <p>
+                  The States & Capitals game on this site stores your game progress, statistics, and nickname in your browser's <strong>localStorage</strong>. This data never leaves your device unless you choose to submit your score to the leaderboard. You can clear this data at any time by clearing your browser's local storage for this site.
+                </p>
+
+                <h3>Leaderboard (Firebase/Firestore)</h3>
+                <p>
+                  If you submit a score to the Nifty Fifty leaderboard, your nickname and score are stored in Google Firebase/Firestore. No email address, IP address, or other identifying information is stored alongside your leaderboard entry — just the nickname you choose and your score.
+                </p>
+
+                <h3>Contact form</h3>
+                <p>
+                  If you use the contact form, the information you provide (name, email, message) is sent to me directly. I use it only to respond to your inquiry.
+                </p>
+
+                <h2>How your data is used</h2>
+                <ul>
+                  <li><strong>Analytics data</strong> — To understand site traffic and improve the site.</li>
+                  <li><strong>localStorage data</strong> — To save your game progress between sessions, entirely on your device.</li>
+                  <li><strong>Leaderboard data</strong> — To display high scores on the game leaderboard.</li>
+                  <li><strong>Contact form data</strong> — To respond to your message.</li>
+                </ul>
+
+                <h2>Third-party services</h2>
+                <p>This site uses the following third-party services:</p>
+                <ul>
+                  <li><strong>Google Analytics (GA4)</strong> — Web analytics. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google's Privacy Policy</a></li>
+                  <li><strong>Google Firebase/Firestore</strong> — Leaderboard data storage. <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener noreferrer">Firebase Privacy Policy</a></li>
+                </ul>
+
+                <h2>Data sharing</h2>
+                <p>
+                  I don't sell, rent, or share your personal data with anyone. The only third parties that receive data are Google Analytics and Firebase, as described above, and only for the purposes stated.
+                </p>
+
+                <h2>Your choices</h2>
+                <ul>
+                  <li>You can block cookies through your browser settings.</li>
+                  <li>You can opt out of Google Analytics with the <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener noreferrer">GA opt-out add-on</a>.</li>
+                  <li>You can clear localStorage through your browser's developer tools or settings.</li>
+                  <li>You don't have to submit a leaderboard score — game progress is saved locally regardless.</li>
+                </ul>
+
+                <h2>Changes to this policy</h2>
+                <p>
+                  If I make meaningful changes to this policy, I'll update the effective date at the top of this page. I'm not going to start collecting more data without telling you.
+                </p>
+
+                <h2>Questions?</h2>
+                <p>
+                  If you have questions about this privacy policy, feel free to <a href="/contact">get in touch</a> or email me at <a href="mailto:timothyfranzke@gmail.com">timothyfranzke@gmail.com</a>.
+                </p>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <Footer />
+
+    <script>
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+            }
+          });
+        },
+        {
+          threshold: 0.1,
+          rootMargin: '0px 0px -50px 0px',
+        }
+      );
+
+      document.querySelectorAll('.animate-on-scroll').forEach((el) => {
+        observer.observe(el);
+      });
+    </script>
+  </body>
+</html>
