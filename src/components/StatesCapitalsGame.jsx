@@ -68,6 +68,13 @@ const leaderboard = {
   },
 };
 
+// ─── ANALYTICS ────────────────────────────────────────────────────────────
+const ga = (event, params) => {
+  if (typeof window !== "undefined" && window.gtag) {
+    window.gtag("event", event, params);
+  }
+};
+
 // ─── DATA ────────────────────────────────────────────────────────────────
 const STATES = [
   { s: "Alabama", c: "Montgomery", a: "AL", r: "South" },
@@ -689,7 +696,9 @@ const Quiz = ({ onExit, recordResult, category, direction: dir, subset }) => {
     statsStore.record(current.s, right, "quiz");
     setTimeout(() => {
       if (idx + 1 >= deck.length) {
-        onExit({ correct: right ? correct + 1 : correct, total: deck.length });
+        const finalCorrect = right ? correct + 1 : correct;
+        ga("quiz_complete", { correct: finalCorrect, total: deck.length, pct: Math.round(finalCorrect / deck.length * 100) });
+        onExit({ correct: finalCorrect, total: deck.length });
       } else {
         setIdx((i) => i + 1);
         setSelected(null);
@@ -846,7 +855,9 @@ const TypeIt = ({ onExit, recordResult, category, direction: dir, subset }) => {
 
   const next = (wasRight) => {
     if (idx + 1 >= deck.length) {
-      onExit({ correct: wasRight ? correct + 1 : correct, total: deck.length });
+      const finalCorrect = wasRight ? correct + 1 : correct;
+      ga("typeit_complete", { correct: finalCorrect, total: deck.length, pct: Math.round(finalCorrect / deck.length * 100) });
+      onExit({ correct: finalCorrect, total: deck.length });
     } else {
       setIdx((i) => i + 1);
       setInput("");
@@ -998,6 +1009,7 @@ const Speed = ({ onExit, recordResult, category, direction: dir, onViewLeaderboa
     if (done) return;
     if (time <= 0) {
       setDone(true);
+      ga("speed_complete", { score, category });
       return;
     }
     const t = setTimeout(() => setTime((x) => x - 1), 1000);
@@ -1042,6 +1054,7 @@ const Speed = ({ onExit, recordResult, category, direction: dir, onViewLeaderboa
       const r = await leaderboard.getRank(score, category);
       setRank(r);
       setPosted(true);
+      ga("leaderboard_submit", { score, category, rank: r });
     } catch (e) {
       console.error("Leaderboard submit failed:", e);
     }
@@ -1399,6 +1412,7 @@ const Study = ({ onExit, category, direction: dir, subset }) => {
 
       if (nextDeck.length === 0) {
         setDone(true);
+        ga("flashcards_complete", { known: known.size + (knew ? 1 : 0), total: source.length, passes: pass });
       } else {
         setDeck(shuffle(nextDeck));
         setIdx(0);
@@ -2098,6 +2112,7 @@ const MatchGame = ({ config, category, onExit }) => {
   // Check for game complete
   useEffect(() => {
     if (matchedPairs.size === pairCount && pairCount > 0) {
+      ga("match_complete", { pairs: pairCount, moves, time });
       setTimeout(() => setDone(true), 600);
     }
   }, [matchedPairs, pairCount]);
@@ -2681,11 +2696,13 @@ const EscapeGame = ({ config, category, direction, onExit }) => {
     }
 
     if (fb.every((f) => f === "green")) {
+      ga("escape_complete", { escaped: true, attempts: attempt });
       setTimeout(() => {
         setDone(true);
         setEscaped(true);
       }, 600);
     } else if (attempt >= maxAttempts) {
+      ga("escape_complete", { escaped: false, attempts: attempt });
       setTimeout(() => {
         setDone(true);
         setEscaped(false);
@@ -3854,6 +3871,9 @@ export default function App() {
             direction={direction}
             setDirection={setDirection}
             onPick={(id) => {
+              if (["quiz", "type", "speed", "study", "match", "escape"].includes(id)) {
+                ga("game_mode_start", { mode: id, category, direction });
+              }
               if (id === "quiz") setScreen("quiz");
               if (id === "type") setScreen("type");
               if (id === "speed") setScreen("speed");
