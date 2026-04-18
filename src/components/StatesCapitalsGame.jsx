@@ -159,11 +159,28 @@ const statsStore = {
   _write(data) {
     localStorage.setItem(STATS_KEY, JSON.stringify(data));
   },
-  record(stateName, correct) {
+  _migrate(entry) {
+    // Migrate old shape { correct, wrong } to new shape with status/history
+    if (entry && typeof entry.status === "undefined") {
+      const acc = (entry.correct + entry.wrong) > 0
+        ? entry.correct / (entry.correct + entry.wrong) : 0;
+      entry.status = (entry.correct + entry.wrong) > 0 ? (acc >= 0.5 ? "know" : "dontknow") : null;
+      entry.history = [];
+      entry.lastSeen = null;
+    }
+    return entry;
+  },
+  record(stateName, correct, mode) {
     const data = this._read();
-    if (!data[stateName]) data[stateName] = { correct: 0, wrong: 0 };
-    if (correct) data[stateName].correct++;
-    else data[stateName].wrong++;
+    if (!data[stateName]) data[stateName] = { correct: 0, wrong: 0, status: null, history: [], lastSeen: null };
+    this._migrate(data[stateName]);
+    const s = data[stateName];
+    if (correct) s.correct++;
+    else s.wrong++;
+    s.status = correct ? "know" : "dontknow";
+    s.lastSeen = Date.now();
+    s.history.unshift({ r: correct, m: mode || "?", t: Date.now() });
+    if (s.history.length > 10) s.history.length = 10;
     this._write(data);
   },
   getAccuracy(stateName) {
@@ -171,6 +188,36 @@ const statsStore = {
     const s = data[stateName];
     if (!s || (s.correct + s.wrong === 0)) return null;
     return s.correct / (s.correct + s.wrong);
+  },
+  getConfidence(stateName) {
+    const data = this._read();
+    const s = data[stateName];
+    if (!s) return null;
+    this._migrate(s);
+    if (s.history && s.history.length > 0) {
+      return s.history.filter((h) => h.r).length / s.history.length;
+    }
+    if (s.correct + s.wrong === 0) return null;
+    return s.correct / (s.correct + s.wrong);
+  },
+  getStatus(stateName) {
+    const data = this._read();
+    const s = data[stateName];
+    if (!s) return null;
+    this._migrate(s);
+    return s.status || null;
+  },
+  getHistory(stateName) {
+    const data = this._read();
+    const s = data[stateName];
+    if (!s) return [];
+    this._migrate(s);
+    return s.history || [];
+  },
+  getAllStats() {
+    const data = this._read();
+    Object.values(data).forEach((s) => this._migrate(s));
+    return data;
   },
   getWeakest(count) {
     const data = this._read();
@@ -549,18 +596,31 @@ const Home = ({ onPick, stats, category, setCategory, direction, setDirection })
         ))}
       </div>
 
-      {/* Leaderboard link */}
-      <button
-        onClick={() => onPick("leaderboard")}
-        className="w-full mt-6 py-3 rounded-2xl font-mono text-xs uppercase tracking-widest transition hover:opacity-80 flex items-center justify-center gap-2"
-        style={{
-          background: "rgba(26,37,55,0.05)",
-          color: "var(--ink)",
-          border: "2px solid rgba(26,37,55,0.12)",
-        }}
-      >
-        <span style={{ fontSize: "1rem" }}>🏆</span> Leaderboard
-      </button>
+      {/* Leaderboard & Progress links */}
+      <div className="flex gap-3 mt-6">
+        <button
+          onClick={() => onPick("leaderboard")}
+          className="flex-1 py-3 rounded-2xl font-mono text-xs uppercase tracking-widest transition hover:opacity-80 flex items-center justify-center gap-2"
+          style={{
+            background: "rgba(26,37,55,0.05)",
+            color: "var(--ink)",
+            border: "2px solid rgba(26,37,55,0.12)",
+          }}
+        >
+          <span style={{ fontSize: "1rem" }}>🏆</span> Leaderboard
+        </button>
+        <button
+          onClick={() => onPick("progress")}
+          className="flex-1 py-3 rounded-2xl font-mono text-xs uppercase tracking-widest transition hover:opacity-80 flex items-center justify-center gap-2"
+          style={{
+            background: "rgba(26,37,55,0.05)",
+            color: "var(--ink)",
+            border: "2px solid rgba(26,37,55,0.12)",
+          }}
+        >
+          <span style={{ fontSize: "1rem" }}>📍</span> My Progress
+        </button>
+      </div>
 
       <div
         className="text-center mt-4 font-mono text-[10px] uppercase tracking-widest opacity-40"
@@ -598,7 +658,7 @@ const Quiz = ({ onExit, recordResult, category, direction: dir }) => {
       setStreak(0);
     }
     recordResult(right);
-    statsStore.record(current.s, right);
+    statsStore.record(current.s, right, "quiz");
     setTimeout(() => {
       if (idx + 1 >= deck.length) {
         onExit({ correct: right ? correct + 1 : correct, total: deck.length });
@@ -735,7 +795,7 @@ const TypeIt = ({ onExit, recordResult, category, direction: dir }) => {
     setFeedback(exact ? "right" : close ? "close" : "wrong");
     if (close) setShowAnswer(true); // show correct spelling
     recordResult(right);
-    statsStore.record(current.s, right);
+    statsStore.record(current.s, right, "type");
     if (right) {
       setCorrect((c) => c + 1);
       setStreak((s) => s + 1);
@@ -752,7 +812,7 @@ const TypeIt = ({ onExit, recordResult, category, direction: dir }) => {
     setShowAnswer(true);
     setStreak(0);
     recordResult(false);
-    statsStore.record(current.s, false);
+    statsStore.record(current.s, false, "type");
     setTimeout(() => next(false), 1500);
   };
 
@@ -928,7 +988,7 @@ const Speed = ({ onExit, recordResult, category, direction: dir, onViewLeaderboa
     const right = choice === qa.answer;
     setFlash(right ? "right" : "wrong");
     recordResult(right);
-    statsStore.record(current.s, right);
+    statsStore.record(current.s, right, "speed");
     if (right) setScore((s) => s + 1);
     setTimeout(() => {
       setFlash(null);
@@ -1258,17 +1318,25 @@ const Study = ({ onExit, category, direction: dir }) => {
     setFlipped(false);
   };
 
-  const skip = () => {
-    setSlideDir("next");
-    setFlipped(false);
+  const goPrev = () => {
+    if (viewIdx > 0) {
+      setSlideDir("prev");
+      setFlipped(false);
+      setIdx(viewIdx - 1);
+    }
+  };
+
+  const goNext = () => {
     if (viewIdx + 1 < viewDeck.length) {
+      setSlideDir("next");
+      setFlipped(false);
       setIdx(viewIdx + 1);
     }
   };
 
   const advance = (knew) => {
     const key = card.s;
-    statsStore.record(key, knew);
+    statsStore.record(key, knew, "flash");
     if (knew) {
       setKnown((s) => new Set(s).add(key));
       setMissed((s) => { const n = new Set(s); n.delete(key); return n; });
@@ -1350,6 +1418,15 @@ const Study = ({ onExit, category, direction: dir }) => {
   const handleFlipClick = () => {
     if (!justSwipedRef.current) setFlipped((f) => !f);
   };
+
+  // Confidence tier for current card
+  const cardStatus = card ? statsStore.getStatus(card.s) : null;
+  const cardConfidence = card ? statsStore.getConfidence(card.s) : null;
+  const cardTier = CONFIDENCE_TIERS.find((t) => t.check(cardStatus, cardConfidence)) || CONFIDENCE_TIERS[4];
+
+  // Session judgment for current card
+  const cardKnown = card ? known.has(card.s) : false;
+  const cardMissed = card ? missed.has(card.s) : false;
 
   if (done) {
     const firstPassKnew = 50 - firstPassMissed.size;
@@ -1513,22 +1590,40 @@ const Study = ({ onExit, category, direction: dir }) => {
         />
       </div>
 
-      {/* Card wrapper — swipeable */}
-      <div
-        key={`${pass}-${viewIdx}-${filter}`}
-        className="w-full mb-6"
-        style={{
-          perspective: "1600px",
-          aspectRatio: "4 / 5",
-          animation: slideAnim,
-          position: "relative",
-          transform: `translateX(${swipeX}px) rotate(${swipeX * 0.05}deg)`,
-          transition: swipingRef.current ? "none" : "transform 0.25s ease",
-        }}
-        onTouchStart={onSwipeStart}
-        onTouchMove={onSwipeMove}
-        onTouchEnd={onSwipeEnd}
-      >
+      {/* Card area with desktop chevrons */}
+      <div className="relative flex items-center mb-6">
+        {/* Left chevron — Previous card (desktop only) */}
+        <button
+          onClick={goPrev}
+          disabled={viewIdx === 0}
+          className="hidden md:flex absolute -left-12 z-10 w-10 h-10 items-center justify-center rounded-full transition hover:scale-110 active:scale-95"
+          style={{
+            background: "rgba(26,37,55,0.08)",
+            color: "var(--ink)",
+            border: "2px solid rgba(26,37,55,0.15)",
+            opacity: viewIdx === 0 ? 0.3 : 1,
+          }}
+          aria-label="Previous card"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+
+        {/* Card wrapper — swipeable */}
+        <div
+          key={`${pass}-${viewIdx}-${filter}`}
+          className="w-full"
+          style={{
+            perspective: "1600px",
+            aspectRatio: "4 / 5",
+            animation: slideAnim,
+            position: "relative",
+            transform: `translateX(${swipeX}px) rotate(${swipeX * 0.05}deg)`,
+            transition: swipingRef.current ? "none" : "transform 0.25s ease",
+          }}
+          onTouchStart={onSwipeStart}
+          onTouchMove={onSwipeMove}
+          onTouchEnd={onSwipeEnd}
+        >
         {/* Flip container */}
         <div
           onClick={handleFlipClick}
@@ -1562,11 +1657,28 @@ const Study = ({ onExit, category, direction: dir }) => {
             >
               {qa.qLabel} · {card.r}
             </div>
-            <div
-              className="absolute top-5 right-5 font-mono text-[10px] font-bold"
-              style={{ color: "var(--dusty)" }}
-            >
-              №{String(idx + 1).padStart(2, "0")}
+            <div className="absolute top-5 right-5 flex items-center gap-2">
+              {(cardKnown || cardMissed) && (
+                <div
+                  className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold"
+                  style={{
+                    background: cardKnown ? "rgba(74,122,79,0.15)" : "rgba(193,74,51,0.15)",
+                    color: cardKnown ? "#4A7A4F" : "#C14A33",
+                  }}
+                >
+                  {cardKnown ? "✓ Know" : "✗ Don't Know"}
+                </div>
+              )}
+              <div
+                className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
+                style={{ background: `${cardTier.color}20`, color: cardTier.color }}
+              >
+                <span className="inline-block w-2 h-2 rounded-full" style={{ background: cardTier.color }} />
+                {cardTier.label}
+              </div>
+              <div className="font-mono text-[10px] font-bold" style={{ color: "var(--dusty)" }}>
+                №{String(idx + 1).padStart(2, "0")}
+              </div>
             </div>
 
             <div
@@ -1624,11 +1736,28 @@ const Study = ({ onExit, category, direction: dir }) => {
             >
               {qa.aLabel} · {card.r}
             </div>
-            <div
-              className="absolute top-5 right-5 font-mono text-[10px] font-bold"
-              style={{ color: "var(--gold)" }}
-            >
-              №{String(idx + 1).padStart(2, "0")}
+            <div className="absolute top-5 right-5 flex items-center gap-2">
+              {(cardKnown || cardMissed) && (
+                <div
+                  className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold"
+                  style={{
+                    background: cardKnown ? "rgba(74,122,79,0.25)" : "rgba(193,74,51,0.25)",
+                    color: cardKnown ? "#8DB891" : "#D4836A",
+                  }}
+                >
+                  {cardKnown ? "✓ Know" : "✗ Don't Know"}
+                </div>
+              )}
+              <div
+                className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
+                style={{ background: `${cardTier.color}30`, color: cardTier.color }}
+              >
+                <span className="inline-block w-2 h-2 rounded-full" style={{ background: cardTier.color }} />
+                {cardTier.label}
+              </div>
+              <div className="font-mono text-[10px] font-bold" style={{ color: "var(--gold)" }}>
+                №{String(idx + 1).padStart(2, "0")}
+              </div>
             </div>
 
             <div
@@ -1704,6 +1833,23 @@ const Study = ({ onExit, category, direction: dir }) => {
             </div>
           </>
         )}
+        </div>
+
+        {/* Right chevron — Next card (desktop only) */}
+        <button
+          onClick={goNext}
+          disabled={viewIdx + 1 >= viewDeck.length}
+          className="hidden md:flex absolute -right-12 z-10 w-10 h-10 items-center justify-center rounded-full transition hover:scale-110 active:scale-95"
+          style={{
+            background: "rgba(26,37,55,0.08)",
+            color: "var(--ink)",
+            border: "2px solid rgba(26,37,55,0.15)",
+            opacity: viewIdx + 1 >= viewDeck.length ? 0.3 : 1,
+          }}
+          aria-label="Next card"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
       </div>
 
       <div
@@ -1725,17 +1871,6 @@ const Study = ({ onExit, category, direction: dir }) => {
           }}
         >
           Don't Know
-        </button>
-        <button
-          onClick={skip}
-          className="rounded-2xl px-3 p-4 font-mono text-xs uppercase tracking-widest transition active:scale-[0.96]"
-          style={{
-            background: "transparent",
-            color: "var(--ink)",
-            border: "2px solid rgba(26,37,55,0.2)",
-          }}
-        >
-          Skip
         </button>
         <button
           onClick={() => advance(true)}
@@ -2504,7 +2639,7 @@ const EscapeGame = ({ config, category, direction, onExit }) => {
     if (!statsRecorded) {
       puzzle.forEach((q, i) => {
         const correct = fb[i] === "green";
-        statsStore.record(q.state.s, correct);
+        statsStore.record(q.state.s, correct, "escape");
       });
       setStatsRecorded(true);
     }
@@ -3145,6 +3280,264 @@ const Leaderboard = ({ onBack }) => {
   );
 };
 
+// ─── PROGRESS MAP ───────────────────────────────────────────────────────
+
+// Abbreviation to state name lookup
+const ABBR_TO_STATE = {};
+STATES.forEach(({ s, a }) => { ABBR_TO_STATE[a] = s; });
+
+const CONFIDENCE_TIERS = [
+  { label: "Solid", color: "#4A7A4F", check: (s, c) => s === "know" && c >= 0.8 },
+  { label: "Shaky", color: "#8DB891", check: (s, c) => s === "know" && c < 0.8 },
+  { label: "Getting There", color: "#D4836A", check: (s, c) => s === "dontknow" && c >= 0.3 },
+  { label: "Weak", color: "#C14A33", check: (s, c) => s === "dontknow" && c < 0.3 },
+  { label: "Not Tested", color: "#DDD4BE", check: (s, c) => s === null },
+];
+
+const getStateColor = (stateName) => {
+  const status = statsStore.getStatus(stateName);
+  const confidence = statsStore.getConfidence(stateName);
+  for (const tier of CONFIDENCE_TIERS) {
+    if (tier.check(status, confidence)) return tier.color;
+  }
+  return "#DDD4BE";
+};
+
+const relativeTime = (ts) => {
+  if (!ts) return "Never";
+  const seconds = Math.floor((Date.now() - ts) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+};
+
+const ProgressMap = ({ onBack }) => {
+  const [selected, setSelected] = useState(null);
+  const [svgLoaded, setSvgLoaded] = useState(false);
+  const mapRef = useRef(null);
+
+  // Fetch and inject the SVG map
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/us-map.svg")
+      .then((r) => r.text())
+      .then((svgText) => {
+        if (cancelled || !mapRef.current) return;
+        // Parse the SVG
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(svgText, "image/svg+xml");
+        const svg = doc.querySelector("svg");
+        if (!svg) return;
+
+        // Clean up and style the SVG
+        svg.setAttribute("width", "100%");
+        svg.setAttribute("height", "100%");
+        svg.style.display = "block";
+
+        // Color each state path and add click handlers
+        const validAbbrs = new Set(STATES.map((st) => st.a));
+        svg.querySelectorAll("path[id]").forEach((path) => {
+          const abbr = path.getAttribute("id");
+          if (!validAbbrs.has(abbr)) return;
+          const stateName = ABBR_TO_STATE[abbr];
+          if (!stateName) return;
+          path.style.fill = getStateColor(stateName);
+          path.style.stroke = "rgba(26,37,55,0.3)";
+          path.style.strokeWidth = "0.8";
+          path.style.cursor = "pointer";
+          path.style.transition = "fill 0.2s, stroke-width 0.2s";
+        });
+
+        mapRef.current.innerHTML = "";
+        mapRef.current.appendChild(svg);
+        setSvgLoaded(true);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Update colors and selection highlight when selected changes or data refreshes
+  useEffect(() => {
+    if (!mapRef.current || !svgLoaded) return;
+    const svg = mapRef.current.querySelector("svg");
+    if (!svg) return;
+    const validAbbrs = new Set(STATES.map((st) => st.a));
+
+    svg.querySelectorAll("path[id]").forEach((path) => {
+      const abbr = path.getAttribute("id");
+      if (!validAbbrs.has(abbr)) return;
+      const stateName = ABBR_TO_STATE[abbr];
+      if (!stateName) return;
+      path.style.fill = getStateColor(stateName);
+      const isSelected = selected === abbr;
+      path.style.stroke = isSelected ? "var(--ink)" : "rgba(26,37,55,0.3)";
+      path.style.strokeWidth = isSelected ? "2.5" : "0.8";
+    });
+  }, [selected, svgLoaded]);
+
+  // Attach click handlers (separate effect to avoid stale closure)
+  useEffect(() => {
+    if (!mapRef.current || !svgLoaded) return;
+    const svg = mapRef.current.querySelector("svg");
+    if (!svg) return;
+    const validAbbrs = new Set(STATES.map((st) => st.a));
+
+    const handlers = [];
+    svg.querySelectorAll("path[id]").forEach((path) => {
+      const abbr = path.getAttribute("id");
+      if (!validAbbrs.has(abbr)) return;
+      const handler = () => setSelected((prev) => prev === abbr ? null : abbr);
+      path.addEventListener("click", handler);
+      handlers.push({ path, handler });
+    });
+
+    return () => {
+      handlers.forEach(({ path, handler }) => path.removeEventListener("click", handler));
+    };
+  }, [svgLoaded]);
+
+  // Summary counts
+  const allStats = statsStore.getAllStats();
+  let tested = 0, know = 0, dontKnow = 0;
+  STATES.forEach(({ s }) => {
+    const status = statsStore.getStatus(s);
+    if (status === "know") { tested++; know++; }
+    else if (status === "dontknow") { tested++; dontKnow++; }
+  });
+  const unseen = 50 - tested;
+
+  const selectedState = selected ? STATES.find((st) => st.a === selected) : null;
+  const selectedStats = selectedState ? allStats[selectedState.s] : null;
+  const selectedHistory = selectedState ? statsStore.getHistory(selectedState.s) : [];
+
+  return (
+    <div style={{ animation: "fadeIn 0.35s ease-out" }}>
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <button
+          onClick={onBack}
+          className="w-9 h-9 rounded-full flex items-center justify-center text-sm transition hover:opacity-70"
+          style={{ background: "rgba(26,37,55,0.08)", color: "var(--ink)" }}
+        >
+          ←
+        </button>
+        <h2 className="font-display font-black text-2xl" style={{ color: "var(--ink)" }}>
+          My Progress
+        </h2>
+      </div>
+
+      {/* Summary strip */}
+      <div
+        className="rounded-2xl px-4 py-3 mb-5 font-mono text-xs flex flex-wrap gap-x-4 gap-y-1 justify-center"
+        style={{ background: "rgba(26,37,55,0.06)", color: "var(--ink)" }}
+      >
+        <span><strong>{tested}</strong>/50 tested</span>
+        <span style={{ color: "#4A7A4F" }}><strong>{know}</strong> know</span>
+        <span style={{ color: "#C14A33" }}><strong>{dontKnow}</strong> don't know</span>
+        <span style={{ opacity: 0.5 }}><strong>{unseen}</strong> unseen</span>
+      </div>
+
+      {/* SVG Map */}
+      <div
+        ref={mapRef}
+        className="relative w-full mb-4"
+        style={{ minHeight: 200 }}
+      />
+
+      {/* Legend */}
+      <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mb-5 font-mono text-[10px] uppercase tracking-wider" style={{ color: "var(--ink)" }}>
+        {CONFIDENCE_TIERS.map((tier) => (
+          <div key={tier.label} className="flex items-center gap-1.5">
+            <span
+              className="inline-block w-3 h-3 rounded-full"
+              style={{ background: tier.color }}
+            />
+            {tier.label}
+          </div>
+        ))}
+      </div>
+
+      {/* Detail card */}
+      {selectedState && (
+        <div
+          className="rounded-2xl p-5 mt-2"
+          style={{
+            background: "rgba(26,37,55,0.06)",
+            border: "2px solid rgba(26,37,55,0.1)",
+            animation: "fadeIn 0.2s ease-out",
+          }}
+        >
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <h3 className="font-display font-black text-lg" style={{ color: "var(--ink)" }}>
+                {selectedState.s}
+              </h3>
+              <div className="font-mono text-xs opacity-60">
+                {selectedState.c} · {selectedState.a}
+              </div>
+            </div>
+            {/* Status badge */}
+            <span
+              className="font-mono text-[10px] uppercase tracking-wider px-3 py-1 rounded-full font-bold"
+              style={{
+                background: statsStore.getStatus(selectedState.s) === "know"
+                  ? "rgba(74,122,79,0.15)" : statsStore.getStatus(selectedState.s) === "dontknow"
+                  ? "rgba(193,74,51,0.15)" : "rgba(26,37,55,0.08)",
+                color: statsStore.getStatus(selectedState.s) === "know"
+                  ? "#4A7A4F" : statsStore.getStatus(selectedState.s) === "dontknow"
+                  ? "#C14A33" : "var(--ink)",
+              }}
+            >
+              {statsStore.getStatus(selectedState.s) === "know" ? "Know" : statsStore.getStatus(selectedState.s) === "dontknow" ? "Don't Know" : "Not Tested"}
+            </span>
+          </div>
+
+          {selectedStats && (selectedStats.correct > 0 || selectedStats.wrong > 0) ? (
+            <>
+              {/* Accuracy */}
+              <div className="font-mono text-xs mb-2" style={{ color: "var(--ink)" }}>
+                {selectedStats.correct} correct, {selectedStats.wrong} wrong
+                {(selectedStats.correct + selectedStats.wrong) > 0 && (
+                  <span className="opacity-60">
+                    {" "}({Math.round(selectedStats.correct / (selectedStats.correct + selectedStats.wrong) * 100)}%)
+                  </span>
+                )}
+              </div>
+
+              {/* Last seen */}
+              <div className="font-mono text-[10px] opacity-50 mb-3">
+                Last seen: {relativeTime(selectedStats.lastSeen)}
+              </div>
+
+              {/* Recent trend */}
+              {selectedHistory.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <span className="font-mono text-[10px] uppercase tracking-wider opacity-50 mr-2">Recent:</span>
+                  {selectedHistory.slice(0, 5).map((h, i) => (
+                    <span
+                      key={i}
+                      className="inline-block w-3 h-3 rounded-full"
+                      style={{ background: h.r ? "#4A7A4F" : "#C14A33" }}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="font-mono text-xs opacity-40">
+              No data yet — play some rounds!
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── SPLASH SCREEN ──────────────────────────────────────────────────────
 const Splash = ({ onDone }) => {
   const [fading, setFading] = useState(false);
@@ -3293,6 +3686,7 @@ export default function App() {
               if (id === "match") setScreen("matchConfig");
               if (id === "escape") setScreen("escapeConfig");
               if (id === "leaderboard") setScreen("leaderboard");
+              if (id === "progress") setScreen("progress");
             }}
           />
         )}
@@ -3354,6 +3748,7 @@ export default function App() {
             }}
           />
         )}
+        {screen === "progress" && <ProgressMap onBack={goHome} />}
         {screen === "leaderboard" && <Leaderboard onBack={goHome} />}
         {screen === "results" && result && (
           <Results
