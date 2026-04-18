@@ -26,12 +26,13 @@ const ogImage = new URL('/og.png', Astro.site);
 <!doctype html>
 <html lang="en">
   <head>
-    <!-- Google Analytics -->
+    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-Z73MJJ9FNB"></script>
-    <script is:inline>
+    <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
+
       gtag('config', 'G-Z73MJJ9FNB');
     </script>
 
