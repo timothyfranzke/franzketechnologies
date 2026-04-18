@@ -873,7 +873,7 @@ const TypeIt = ({ onExit, recordResult, category, direction: dir }) => {
 };
 
 // ─── SPEED MODE ──────────────────────────────────────────────────────────
-const Speed = ({ onExit, recordResult, category, direction: dir }) => {
+const Speed = ({ onExit, recordResult, category, direction: dir, onViewLeaderboard }) => {
   const [deck, setDeck] = useState(() => shuffle(STATES));
   const [idx, setIdx] = useState(0);
   const [time, setTime] = useState(60);
@@ -1005,6 +1005,13 @@ const Speed = ({ onExit, recordResult, category, direction: dir }) => {
                     </div>
                   )}
                 </div>
+                <button
+                  onClick={onViewLeaderboard}
+                  className="w-full rounded-xl py-2.5 font-mono text-xs uppercase tracking-widest transition hover:opacity-70"
+                  style={{ color: "var(--ink)", border: "2px solid rgba(26,37,55,0.15)" }}
+                >
+                  View Leaderboard
+                </button>
               </div>
             ) : showNickInput ? (
               <div className="fade-in">
@@ -3271,7 +3278,7 @@ export default function App() {
           <TypeIt onExit={handleExit("type")} recordResult={recordResult} {...modeProps} />
         )}
         {screen === "speed" && (
-          <Speed onExit={handleExit("speed")} recordResult={recordResult} {...modeProps} />
+          <Speed onExit={handleExit("speed")} recordResult={recordResult} onViewLeaderboard={() => setScreen("leaderboard")} {...modeProps} />
         )}
         {screen === "study" && <Study onExit={handleExit("study")} {...modeProps} />}
         {screen === "matchConfig" && (
