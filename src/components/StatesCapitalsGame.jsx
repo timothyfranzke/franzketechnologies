@@ -28,6 +28,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const NICKNAME_KEY = "nifty-fifty-nickname";
+const NICKNAMES_KEY = "nifty-fifty-nicknames";
 
 const leaderboard = {
   async submit(name, score, category) {
@@ -66,6 +67,27 @@ const leaderboard = {
   },
   setNickname(name) {
     localStorage.setItem(NICKNAME_KEY, name);
+    this.addNickname(name);
+  },
+  getAllNicknames() {
+    try {
+      const raw = localStorage.getItem(NICKNAMES_KEY);
+      if (raw) return JSON.parse(raw);
+      // Migrate: if old single nickname exists, seed the list
+      const single = this.getNickname();
+      if (single) {
+        localStorage.setItem(NICKNAMES_KEY, JSON.stringify([single]));
+        return [single];
+      }
+      return [];
+    } catch { return []; }
+  },
+  addNickname(name) {
+    try {
+      const list = this.getAllNicknames().filter((n) => n !== name);
+      list.unshift(name); // most recent first
+      localStorage.setItem(NICKNAMES_KEY, JSON.stringify(list.slice(0, 20)));
+    } catch {}
   },
 };
 
@@ -1070,13 +1092,15 @@ const Speed = ({ onExit, recordResult, category, direction: dir, onViewLeaderboa
     setPosting(false);
   };
 
+  const savedNames = leaderboard.getAllNicknames().filter((n) => !filter.check(n));
+  const [showNamePicker, setShowNamePicker] = useState(false);
+
   const startPost = () => {
-    const existing = leaderboard.getNickname();
-    if (existing && !filter.check(existing)) {
-      handlePost(existing);
+    if (savedNames.length > 0) {
+      setShowNamePicker(true);
     } else {
       setShowNickInput(true);
-      setNickInput(existing && filter.check(existing) ? "" : "");
+      setNickInput("");
     }
   };
 
@@ -1148,6 +1172,45 @@ const Speed = ({ onExit, recordResult, category, direction: dir, onViewLeaderboa
                   View Leaderboard
                 </button>
               </div>
+            ) : showNamePicker && savedNames.length > 0 ? (
+              <div className="fade-in">
+                <div
+                  className="rounded-2xl p-4"
+                  style={{ background: "var(--paper)", border: "2px solid var(--ink)" }}
+                >
+                  <div
+                    className="font-mono text-[10px] uppercase tracking-widest mb-3"
+                    style={{ color: "var(--dusty)" }}
+                  >
+                    Who's Playing?
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {savedNames.map((name) => (
+                      <button
+                        key={name}
+                        onClick={() => handlePost(name)}
+                        disabled={posting}
+                        className="rounded-xl px-4 py-2 font-display font-bold text-sm transition active:scale-[0.96]"
+                        style={{
+                          background: "var(--gold)",
+                          color: "var(--ink)",
+                          border: "2px solid var(--ink)",
+                          boxShadow: "2px 2px 0 var(--ink)",
+                        }}
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => { setShowNamePicker(false); setShowNickInput(true); setNickInput(""); }}
+                    className="font-mono text-[10px] uppercase tracking-widest transition hover:opacity-70"
+                    style={{ color: "var(--dusty)" }}
+                  >
+                    Someone else? →
+                  </button>
+                </div>
+              </div>
             ) : showNickInput ? (
               <div className="fade-in">
                 <div
@@ -1199,6 +1262,15 @@ const Speed = ({ onExit, recordResult, category, direction: dir, onViewLeaderboa
                       3-15 characters
                     </div>
                   )}
+                  {savedNames.length > 0 && (
+                    <button
+                      onClick={() => { setShowNickInput(false); setShowNamePicker(true); }}
+                      className="font-mono text-[10px] uppercase tracking-widest mt-2 transition hover:opacity-70"
+                      style={{ color: "var(--dusty)" }}
+                    >
+                      ← Back to names
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (
@@ -1230,6 +1302,7 @@ const Speed = ({ onExit, recordResult, category, direction: dir, onViewLeaderboa
               setPosted(false);
               setRank(null);
               setShowNickInput(false);
+              setShowNamePicker(false);
             }}
             className="w-full rounded-2xl p-4 font-display font-bold text-lg"
             style={{
