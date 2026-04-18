@@ -132,6 +132,22 @@ const shuffle = (arr) => {
 const normalize = (s) =>
   s.toLowerCase().trim().replace(/\./g, "").replace(/\s+/g, " ").replace(/^st /, "saint ");
 
+const levenshtein = (a, b) => {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, (_, i) => {
+    const row = new Array(n + 1);
+    row[0] = i;
+    return row;
+  });
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+  return dp[m][n];
+};
+
 // ─── PERSISTENT STATS ───────────────────────────────────────────────────
 const STATS_KEY = "nifty-fifty-stats";
 
@@ -692,7 +708,7 @@ const TypeIt = ({ onExit, recordResult, category, direction: dir }) => {
   const deck = useMemo(() => shuffle(STATES), []);
   const [idx, setIdx] = useState(0);
   const [input, setInput] = useState("");
-  const [feedback, setFeedback] = useState(null); // 'right' | 'wrong' | null
+  const [feedback, setFeedback] = useState(null); // 'right' | 'close' | 'wrong' | null
   const [correct, setCorrect] = useState(0);
   const [streak, setStreak] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -708,8 +724,16 @@ const TypeIt = ({ onExit, recordResult, category, direction: dir }) => {
   const submit = () => {
     if (feedback) return;
     if (!input.trim()) return;
-    const right = normalize(input) === normalize(qa.answer);
-    setFeedback(right ? "right" : "wrong");
+    const normed = normalize(input);
+    const answer = normalize(qa.answer);
+    const exact = normed === answer;
+    const dist = exact ? 0 : levenshtein(normed, answer);
+    const isAbbr = category === "abbreviations" && dir === "forward";
+    const close = !exact && !isAbbr && dist <= 2;
+    const right = exact || close;
+
+    setFeedback(exact ? "right" : close ? "close" : "wrong");
+    if (close) setShowAnswer(true); // show correct spelling
     recordResult(right);
     statsStore.record(current.s, right);
     if (right) {
@@ -719,7 +743,7 @@ const TypeIt = ({ onExit, recordResult, category, direction: dir }) => {
       setStreak(0);
       setShowAnswer(true);
     }
-    setTimeout(() => next(right), right ? 900 : 1800);
+    setTimeout(() => next(right), right ? (close ? 1400 : 900) : 1800);
   };
 
   const skip = () => {
@@ -744,7 +768,7 @@ const TypeIt = ({ onExit, recordResult, category, direction: dir }) => {
   };
 
   const bg =
-    feedback === "right"
+    feedback === "right" || feedback === "close"
       ? "var(--sage)"
       : feedback === "wrong"
       ? "var(--rust)"
@@ -807,7 +831,7 @@ const TypeIt = ({ onExit, recordResult, category, direction: dir }) => {
       <div
         className={`rounded-2xl p-5 mb-4 transition-colors duration-300 ${
           feedback === "wrong" ? "shake" : ""
-        } ${feedback === "right" ? "pop" : ""}`}
+        } ${feedback === "right" || feedback === "close" ? "pop" : ""}`}
         style={{
           background: bg,
           border: `2px solid var(--ink)`,
@@ -835,7 +859,8 @@ const TypeIt = ({ onExit, recordResult, category, direction: dir }) => {
             className="font-mono text-xs mt-2 text-center uppercase tracking-widest"
             style={{ color: "var(--cream)", opacity: 0.9 }}
           >
-            Answer: {qa.answer}
+            {feedback === "close" ? "Close enough! " : "Answer: "}
+            {qa.answer}
           </div>
         )}
       </div>
