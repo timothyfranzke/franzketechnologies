@@ -9,6 +9,7 @@ import {
   where,
   orderBy,
   limit,
+  startAfter,
   serverTimestamp,
 } from "firebase/firestore";
 
@@ -36,16 +37,18 @@ const leaderboard = {
       timestamp: serverTimestamp(),
     });
   },
-  async getTop(category, max = 20) {
-    const q = query(
+  async getTop(category, max = 20, afterDoc = null) {
+    const constraints = [
       collection(db, "speed-scores"),
       where("category", "==", category),
       orderBy("score", "desc"),
       orderBy("timestamp", "asc"),
-      limit(max)
-    );
+    ];
+    if (afterDoc) constraints.push(startAfter(afterDoc));
+    constraints.push(limit(max));
+    const q = query(...constraints);
     const snap = await getDocs(q);
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    return { entries: snap.docs.map((d) => ({ id: d.id, ...d.data() })), lastDoc: snap.docs[snap.docs.length - 1] || null };
   },
   async getRank(score, category) {
     const q = query(
@@ -403,6 +406,17 @@ const BackBtn = ({ onClick }) => (
 
 // ─── HOME SCREEN ─────────────────────────────────────────────────────────
 const Home = ({ onPick, stats, category, setCategory, direction, setDirection }) => {
+  const [topScore, setTopScore] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    leaderboard.getTop(category, 1).then(({ entries }) => {
+      if (!cancelled && entries.length > 0) setTopScore(entries[0]);
+      else if (!cancelled) setTopScore(null);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [category]);
+
   const catLabel = category === "abbreviations" ? "Abbreviation" : "Capital";
   const modes = [
     {
@@ -585,6 +599,20 @@ const Home = ({ onPick, stats, category, setCategory, direction, setDirection })
               >
                 {m.desc}
               </div>
+              {m.id === "speed" && topScore && (
+                <div
+                  className="inline-flex items-center gap-1.5 font-mono text-[10px] mt-2 px-2.5 py-1 rounded-lg font-bold"
+                  style={{
+                    background: "rgba(26,37,55,0.07)",
+                    border: "1.5px solid rgba(26,37,55,0.12)",
+                    color: "var(--ink)",
+                  }}
+                >
+                  <span>{topScore.name}</span>
+                  <span style={{ opacity: 0.4 }}>·</span>
+                  <span style={{ color: "var(--rust)", fontWeight: 800 }}>{topScore.score}</span>
+                </div>
+              )}
             </div>
             <div
               className="font-mono text-xl"
@@ -633,8 +661,8 @@ const Home = ({ onPick, stats, category, setCategory, direction, setDirection })
 };
 
 // ─── QUIZ MODE ───────────────────────────────────────────────────────────
-const Quiz = ({ onExit, recordResult, category, direction: dir }) => {
-  const deck = useMemo(() => shuffle(STATES), []);
+const Quiz = ({ onExit, recordResult, category, direction: dir, subset }) => {
+  const deck = useMemo(() => shuffle(subset || STATES), []);
   const [idx, setIdx] = useState(0);
   const [selected, setSelected] = useState(null);
   const [correct, setCorrect] = useState(0);
@@ -764,8 +792,8 @@ const Quiz = ({ onExit, recordResult, category, direction: dir }) => {
 };
 
 // ─── TYPE MODE ───────────────────────────────────────────────────────────
-const TypeIt = ({ onExit, recordResult, category, direction: dir }) => {
-  const deck = useMemo(() => shuffle(STATES), []);
+const TypeIt = ({ onExit, recordResult, category, direction: dir, subset }) => {
+  const deck = useMemo(() => shuffle(subset || STATES), []);
   const [idx, setIdx] = useState(0);
   const [input, setInput] = useState("");
   const [feedback, setFeedback] = useState(null); // 'right' | 'close' | 'wrong' | null
@@ -1288,8 +1316,9 @@ const Speed = ({ onExit, recordResult, category, direction: dir, onViewLeaderboa
 };
 
 // ─── FLASHCARDS / STUDY ──────────────────────────────────────────────────
-const Study = ({ onExit, category, direction: dir }) => {
-  const [deck, setDeck] = useState(() => shuffle(STATES));
+const Study = ({ onExit, category, direction: dir, subset }) => {
+  const source = subset || STATES;
+  const [deck, setDeck] = useState(() => shuffle(source));
   const [idx, setIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [slideDir, setSlideDir] = useState("next");
@@ -1360,7 +1389,7 @@ const Study = ({ onExit, category, direction: dir }) => {
         else if (missed.has(k) && k !== key) retryKeys.add(k);
       });
       // Recalculate: cards that were missed and not yet known
-      const nextDeck = STATES.filter((st) => {
+      const nextDeck = source.filter((st) => {
         if (st.s === key && knew) return false;
         if (known.has(st.s)) return false;
         if (missed.has(st.s)) return true;
@@ -1429,8 +1458,9 @@ const Study = ({ onExit, category, direction: dir }) => {
   const cardMissed = card ? missed.has(card.s) : false;
 
   if (done) {
-    const firstPassKnew = 50 - firstPassMissed.size;
-    const pct = Math.round((firstPassKnew / 50) * 100);
+    const total = source.length;
+    const firstPassKnew = total - firstPassMissed.size;
+    const pct = Math.round((firstPassKnew / total) * 100);
     const msg =
       pct === 100
         ? "Flawless."
@@ -1489,7 +1519,7 @@ const Study = ({ onExit, category, direction: dir }) => {
         <div className="space-y-3">
           <button
             onClick={() => {
-              setDeck(shuffle(STATES));
+              setDeck(shuffle(source));
               setIdx(0);
               setFlipped(false);
               setKnown(new Set());
@@ -3057,10 +3087,15 @@ const timeAgo = (timestamp) => {
   return `${Math.floor(days / 30)}mo ago`;
 };
 
+const PAGE_SIZE = 20;
+
 const Leaderboard = ({ onBack }) => {
   const [cat, setCat] = useState("capitals");
   const [scores, setScores] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [lastDoc, setLastDoc] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
   const [nickname, setNickname] = useState(() => leaderboard.getNickname());
   const [editingNick, setEditingNick] = useState(false);
   const [nickInput, setNickInput] = useState(nickname);
@@ -3068,14 +3103,32 @@ const Leaderboard = ({ onBack }) => {
   const fetchScores = useCallback(async (category) => {
     setLoading(true);
     try {
-      const data = await leaderboard.getTop(category);
-      setScores(data);
+      const { entries, lastDoc: last } = await leaderboard.getTop(category, PAGE_SIZE);
+      setScores(entries);
+      setLastDoc(last);
+      setHasMore(entries.length === PAGE_SIZE);
     } catch (e) {
       console.error("Failed to fetch leaderboard:", e);
       setScores([]);
+      setLastDoc(null);
+      setHasMore(false);
     }
     setLoading(false);
   }, []);
+
+  const loadMore = async () => {
+    if (!lastDoc || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const { entries, lastDoc: last } = await leaderboard.getTop(cat, PAGE_SIZE, lastDoc);
+      setScores((prev) => [...prev, ...entries]);
+      setLastDoc(last);
+      setHasMore(entries.length === PAGE_SIZE);
+    } catch (e) {
+      console.error("Failed to load more:", e);
+    }
+    setLoadingMore(false);
+  };
 
   useEffect(() => {
     fetchScores(cat);
@@ -3230,6 +3283,22 @@ const Leaderboard = ({ onBack }) => {
         </div>
       )}
 
+      {/* Load More */}
+      {hasMore && !loading && (
+        <button
+          onClick={loadMore}
+          disabled={loadingMore}
+          className="w-full mt-4 py-3 rounded-2xl font-mono text-xs uppercase tracking-widest transition hover:opacity-80"
+          style={{
+            background: "rgba(26,37,55,0.05)",
+            color: "var(--ink)",
+            border: "2px solid rgba(26,37,55,0.12)",
+          }}
+        >
+          {loadingMore ? "Loading..." : "Load More"}
+        </button>
+      )}
+
       {/* Nickname management */}
       <div className="mt-6 text-center">
         {editingNick ? (
@@ -3316,10 +3385,31 @@ const relativeTime = (ts) => {
   return `${Math.floor(days / 30)}mo ago`;
 };
 
-const ProgressMap = ({ onBack }) => {
+const getStateTier = (stateName) => {
+  const status = statsStore.getStatus(stateName);
+  const confidence = statsStore.getConfidence(stateName);
+  return CONFIDENCE_TIERS.find((t) => t.check(status, confidence)) || CONFIDENCE_TIERS[4];
+};
+
+const ProgressMap = ({ onBack, onPractice }) => {
   const [selected, setSelected] = useState(null);
+  const [selectedTiers, setSelectedTiers] = useState(new Set());
   const [svgLoaded, setSvgLoaded] = useState(false);
   const mapRef = useRef(null);
+
+  const toggleTier = (label) => {
+    setSelectedTiers((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  };
+
+  // Compute subset of states matching selected tiers
+  const practiceSubset = selectedTiers.size > 0
+    ? STATES.filter((st) => selectedTiers.has(getStateTier(st.s).label))
+    : [];
 
   // Fetch and inject the SVG map
   useEffect(() => {
@@ -3360,24 +3450,28 @@ const ProgressMap = ({ onBack }) => {
     return () => { cancelled = true; };
   }, []);
 
-  // Update colors and selection highlight when selected changes or data refreshes
+  // Update colors, selection highlight, and tier dimming
   useEffect(() => {
     if (!mapRef.current || !svgLoaded) return;
     const svg = mapRef.current.querySelector("svg");
     if (!svg) return;
     const validAbbrs = new Set(STATES.map((st) => st.a));
+    const hasTierFilter = selectedTiers.size > 0;
 
     svg.querySelectorAll("path[id]").forEach((path) => {
       const abbr = path.getAttribute("id");
       if (!validAbbrs.has(abbr)) return;
       const stateName = ABBR_TO_STATE[abbr];
       if (!stateName) return;
-      path.style.fill = getStateColor(stateName);
+      const tier = getStateTier(stateName);
+      const dimmed = hasTierFilter && !selectedTiers.has(tier.label);
+      path.style.fill = dimmed ? "#E8E4DC" : getStateColor(stateName);
+      path.style.opacity = dimmed ? "0.4" : "1";
       const isSelected = selected === abbr;
       path.style.stroke = isSelected ? "var(--ink)" : "rgba(26,37,55,0.3)";
       path.style.strokeWidth = isSelected ? "2.5" : "0.8";
     });
-  }, [selected, svgLoaded]);
+  }, [selected, svgLoaded, selectedTiers]);
 
   // Attach click handlers (separate effect to avoid stale closure)
   useEffect(() => {
@@ -3448,18 +3542,88 @@ const ProgressMap = ({ onBack }) => {
         style={{ minHeight: 200 }}
       />
 
-      {/* Legend */}
-      <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mb-5 font-mono text-[10px] uppercase tracking-wider" style={{ color: "var(--ink)" }}>
-        {CONFIDENCE_TIERS.map((tier) => (
-          <div key={tier.label} className="flex items-center gap-1.5">
-            <span
-              className="inline-block w-3 h-3 rounded-full"
-              style={{ background: tier.color }}
-            />
-            {tier.label}
-          </div>
-        ))}
+      {/* Legend — tappable tier pills */}
+      <div className="flex flex-wrap justify-center gap-2 mb-4 font-mono text-[10px] uppercase tracking-wider">
+        {CONFIDENCE_TIERS.map((tier) => {
+          const active = selectedTiers.has(tier.label);
+          return (
+            <button
+              key={tier.label}
+              onClick={() => toggleTier(tier.label)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full transition"
+              style={{
+                background: active ? `${tier.color}25` : "rgba(26,37,55,0.04)",
+                color: active ? tier.color : "var(--ink)",
+                border: `2px solid ${active ? tier.color : "rgba(26,37,55,0.1)"}`,
+                fontWeight: active ? 700 : 400,
+              }}
+            >
+              <span
+                className="inline-block w-2.5 h-2.5 rounded-full"
+                style={{ background: tier.color }}
+              />
+              {tier.label}
+            </button>
+          );
+        })}
       </div>
+
+      {/* Practice bar */}
+      {practiceSubset.length > 0 && (
+        <div
+          className="rounded-2xl px-4 py-4 mb-4"
+          style={{
+            background: "rgba(26,37,55,0.06)",
+            border: "2px solid rgba(26,37,55,0.1)",
+            animation: "fadeIn 0.2s ease-out",
+          }}
+        >
+          <div
+            className="font-mono text-xs mb-3 text-center"
+            style={{ color: "var(--ink)" }}
+          >
+            <strong>{practiceSubset.length}</strong> state{practiceSubset.length !== 1 ? "s" : ""} selected
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => onPractice(practiceSubset, "quiz")}
+              className="flex-1 rounded-xl py-2.5 font-display font-bold text-sm transition active:scale-[0.96]"
+              style={{
+                background: "var(--rust)",
+                color: "var(--cream)",
+                border: "2px solid var(--ink)",
+                boxShadow: "2px 2px 0 var(--ink)",
+              }}
+            >
+              Quiz
+            </button>
+            <button
+              onClick={() => onPractice(practiceSubset, "study")}
+              className="flex-1 rounded-xl py-2.5 font-display font-bold text-sm transition active:scale-[0.96]"
+              style={{
+                background: "var(--gold)",
+                color: "var(--ink)",
+                border: "2px solid var(--ink)",
+                boxShadow: "2px 2px 0 var(--ink)",
+              }}
+            >
+              Flashcards
+            </button>
+            <button
+              onClick={() => onPractice(practiceSubset, "type")}
+              className="flex-1 rounded-xl py-2.5 font-display font-bold text-sm transition active:scale-[0.96]"
+              style={{
+                background: "var(--sage)",
+                color: "var(--cream)",
+                border: "2px solid var(--ink)",
+                boxShadow: "2px 2px 0 var(--ink)",
+              }}
+            >
+              Type It
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Detail card */}
       {selectedState && (
@@ -3622,6 +3786,7 @@ export default function App() {
   const [matchKey, setMatchKey] = useState(0);
   const [escapeConfig, setEscapeConfig] = useState(null);
   const [escapeKey, setEscapeKey] = useState(0);
+  const [progressSubset, setProgressSubset] = useState(null);
   const [stats, setStats] = useState({
     played: 0,
     correct: 0,
@@ -3651,6 +3816,16 @@ export default function App() {
     } else {
       goHome();
     }
+  };
+
+  const handleProgressExit = (mode) => () => {
+    setProgressSubset(null);
+    setScreen("progress");
+  };
+
+  const handlePractice = (subset, mode) => {
+    setProgressSubset(subset);
+    setScreen(mode === "study" ? "study" : mode);
   };
 
   const modeProps = { category, direction };
@@ -3691,15 +3866,31 @@ export default function App() {
           />
         )}
         {screen === "quiz" && (
-          <Quiz onExit={handleExit("quiz")} recordResult={recordResult} {...modeProps} />
+          <Quiz
+            onExit={progressSubset ? handleProgressExit("quiz") : handleExit("quiz")}
+            recordResult={recordResult}
+            subset={progressSubset}
+            {...modeProps}
+          />
         )}
         {screen === "type" && (
-          <TypeIt onExit={handleExit("type")} recordResult={recordResult} {...modeProps} />
+          <TypeIt
+            onExit={progressSubset ? handleProgressExit("type") : handleExit("type")}
+            recordResult={recordResult}
+            subset={progressSubset}
+            {...modeProps}
+          />
         )}
         {screen === "speed" && (
           <Speed onExit={handleExit("speed")} recordResult={recordResult} onViewLeaderboard={() => setScreen("leaderboard")} {...modeProps} />
         )}
-        {screen === "study" && <Study onExit={handleExit("study")} {...modeProps} />}
+        {screen === "study" && (
+          <Study
+            onExit={progressSubset ? handleProgressExit("study") : handleExit("study")}
+            subset={progressSubset}
+            {...modeProps}
+          />
+        )}
         {screen === "matchConfig" && (
           <MatchConfig
             category={category}
@@ -3748,7 +3939,7 @@ export default function App() {
             }}
           />
         )}
-        {screen === "progress" && <ProgressMap onBack={goHome} />}
+        {screen === "progress" && <ProgressMap onBack={goHome} onPractice={handlePractice} />}
         {screen === "leaderboard" && <Leaderboard onBack={goHome} />}
         {screen === "results" && result && (
           <Results
