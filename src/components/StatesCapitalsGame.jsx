@@ -635,7 +635,7 @@ const Home = ({ onPick, stats, category, setCategory, direction, setDirection })
             border: "2px solid rgba(26,37,55,0.12)",
           }}
         >
-          <span style={{ fontSize: "1rem" }}>🏆</span> Leaderboard
+          <span className="font-display text-sm" style={{ opacity: 0.6 }}>★</span> Leaderboard
         </button>
         <button
           onClick={() => onPick("progress")}
@@ -646,7 +646,7 @@ const Home = ({ onPick, stats, category, setCategory, direction, setDirection })
             border: "2px solid rgba(26,37,55,0.12)",
           }}
         >
-          <span style={{ fontSize: "1rem" }}>📍</span> My Progress
+          <span className="font-display text-sm" style={{ opacity: 0.6 }}>◎</span> My Progress
         </button>
       </div>
 
