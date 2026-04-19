@@ -371,6 +371,12 @@ const GlobalStyles = () => (
     }
     .fade-in { animation: fadeIn 0.3s ease-out; }
 
+    @keyframes countdownPop {
+      0% { opacity: 0; transform: scale(0.3); }
+      50% { opacity: 1; transform: scale(1.15); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
     @keyframes slideInRight {
       from { opacity: 0; transform: translateX(90px) scale(0.96); }
       to { opacity: 1; transform: translateX(0) scale(1); }
@@ -1028,18 +1034,29 @@ const Speed = ({ onExit, recordResult, category, direction: dir, onViewLeaderboa
   const [flash, setFlash] = useState(null);
   const [done, setDone] = useState(false);
 
+  // Countdown state: cycles through "Ready?", "3", "2", "1", "GO!", then null (playing)
+  const [countdown, setCountdown] = useState("Ready?");
+
   useEffect(() => {
-    if (done) return;
-    if (time <= 0) {
+    if (countdown === null) return;
+    const steps = { "Ready?": "3", "3": "2", "2": "1", "1": "GO!", "GO!": null };
+    const delay = countdown === "Ready?" ? 1000 : countdown === "GO!" ? 600 : 800;
+    const t = setTimeout(() => setCountdown(steps[countdown]), delay);
+    return () => clearTimeout(t);
+  }, [countdown]);
+
+  useEffect(() => {
+    if (countdown !== null || done) return;
+    if (time <= 0 || idx >= deck.length) {
       setDone(true);
       ga("speed_complete", { score, category });
       return;
     }
     const t = setTimeout(() => setTime((x) => x - 1), 1000);
     return () => clearTimeout(t);
-  }, [time, done]);
+  }, [time, done, countdown, idx]);
 
-  const current = deck[idx % deck.length];
+  const current = deck[idx < deck.length ? idx : deck.length - 1];
   const qa = getQA(current, category, dir);
   const options = useMemo(() => {
     const distractors = getDistractors(current, category, dir);
@@ -1299,6 +1316,7 @@ const Speed = ({ onExit, recordResult, category, direction: dir, onViewLeaderboa
               setTime(60);
               setScore(0);
               setDone(false);
+              setCountdown("Ready?");
               setPosted(false);
               setRank(null);
               setShowNickInput(false);
@@ -1325,6 +1343,46 @@ const Speed = ({ onExit, recordResult, category, direction: dir, onViewLeaderboa
           >
             Back to Menu
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (countdown !== null) {
+    const boxStyles = {
+      "Ready?": { rotate: "-2deg", borderColor: "var(--ink)", background: "var(--cream)" },
+      "3": { rotate: "3deg", borderColor: "var(--ink)", background: "var(--paper)" },
+      "2": { rotate: "-4deg", borderColor: "var(--rust)", background: "var(--cream)" },
+      "1": { rotate: "2.5deg", borderColor: "var(--gold)", background: "var(--paper)" },
+      "GO!": { rotate: "-3deg", borderColor: "var(--rust)", background: "rgba(196,78,71,0.08)" },
+    };
+    const bs = boxStyles[countdown];
+    return (
+      <div className="fade-in" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
+        <div
+          key={countdown}
+          style={{
+            border: `3px solid ${bs.borderColor}`,
+            background: bs.background,
+            boxShadow: "4px 4px 0 var(--ink)",
+            borderRadius: "1rem",
+            padding: countdown === "Ready?" ? "1.5rem 2.5rem" : "1rem 2.5rem",
+            transform: `rotate(${bs.rotate})`,
+            animation: "countdownPop 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+          }}
+        >
+          <div
+            className="font-display font-black text-center"
+            style={{
+              fontSize: countdown === "Ready?" ? "clamp(2.5rem, 12vw, 4.5rem)" : countdown === "GO!" ? "clamp(4rem, 20vw, 8rem)" : "clamp(5rem, 25vw, 10rem)",
+              color: countdown === "GO!" ? "var(--rust)" : "var(--ink)",
+              fontVariationSettings: '"SOFT" 100, "WONK" 1',
+              fontStyle: countdown === "GO!" ? "italic" : "normal",
+              lineHeight: 1,
+            }}
+          >
+            {countdown}
+          </div>
         </div>
       </div>
     );
@@ -3339,13 +3397,15 @@ const Leaderboard = ({ onBack }) => {
         <div className="space-y-2">
           {scores.map((entry, i) => {
             const isYou = nickname && entry.name === nickname;
+            const isPerfect = entry.score >= 50;
             return (
               <div
                 key={entry.id}
                 className="rounded-xl p-3 flex items-center gap-3 transition"
                 style={{
-                  background: isYou ? "rgba(217,164,65,0.1)" : "var(--paper)",
-                  border: `2px solid ${isYou ? "var(--gold)" : "rgba(26,37,55,0.1)"}`,
+                  background: isPerfect ? "rgba(217,164,65,0.12)" : isYou ? "rgba(217,164,65,0.1)" : "var(--paper)",
+                  border: `2px solid ${isPerfect ? "var(--gold)" : isYou ? "var(--gold)" : "rgba(26,37,55,0.1)"}`,
+                  boxShadow: isPerfect ? "3px 3px 0 rgba(217,164,65,0.3)" : "none",
                 }}
               >
                 <div
@@ -3379,11 +3439,26 @@ const Leaderboard = ({ onBack }) => {
                     {timeAgo(entry.timestamp)}
                   </div>
                 </div>
-                <div
-                  className="font-display font-black text-2xl flex-shrink-0"
-                  style={{ color: rankColor(i) }}
-                >
-                  {entry.score}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {isPerfect && (
+                    <div
+                      className="font-mono text-[8px] uppercase tracking-widest font-bold px-2 py-1 rounded stamp"
+                      style={{
+                        color: "var(--gold)",
+                        border: "1.5px solid var(--gold)",
+                        transform: "rotate(-4deg)",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Nifty Fifty
+                    </div>
+                  )}
+                  <div
+                    className="font-display font-black text-2xl"
+                    style={{ color: isPerfect ? "var(--gold)" : rankColor(i) }}
+                  >
+                    {entry.score}
+                  </div>
                 </div>
               </div>
             );
