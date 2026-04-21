@@ -30,6 +30,17 @@ const db = getFirestore(app);
 const NICKNAME_KEY = "nifty-fifty-nickname";
 const NICKNAMES_KEY = "nifty-fifty-nicknames";
 
+// ─── NEW GAME PROMO ────────────────────────────────────────────────────
+const NEWEST_GAME = {
+  id: "reveal",
+  title: "Letter by Letter",
+  desc: "Blanks fill in over time. Type the answer before all the letters are revealed!",
+  icon: "❧",
+  releaseDate: "2026-04-20",
+  newBadgeDays: 2,
+};
+const NEW_GAME_SEEN_KEY = `nifty-fifty-new-game-seen-${NEWEST_GAME.id}`;
+
 const leaderboard = {
   async submit(name, score, category) {
     await addDoc(collection(db, "speed-scores"), {
@@ -88,6 +99,39 @@ const leaderboard = {
       list.unshift(name); // most recent first
       localStorage.setItem(NICKNAMES_KEY, JSON.stringify(list.slice(0, 20)));
     } catch {}
+  },
+};
+
+const revealLeaderboard = {
+  async submit(name, score, category) {
+    await addDoc(collection(db, "reveal-scores"), {
+      name,
+      score,
+      category,
+      timestamp: serverTimestamp(),
+    });
+  },
+  async getTop(category, max = 20, afterDoc = null) {
+    const constraints = [
+      collection(db, "reveal-scores"),
+      where("category", "==", category),
+      orderBy("score", "desc"),
+      orderBy("timestamp", "asc"),
+    ];
+    if (afterDoc) constraints.push(startAfter(afterDoc));
+    constraints.push(limit(max));
+    const q = query(...constraints);
+    const snap = await getDocs(q);
+    return { entries: snap.docs.map((d) => ({ id: d.id, ...d.data() })), lastDoc: snap.docs[snap.docs.length - 1] || null };
+  },
+  async getRank(score, category) {
+    const q = query(
+      collection(db, "reveal-scores"),
+      where("category", "==", category),
+      where("score", ">", score)
+    );
+    const snap = await getDocs(q);
+    return snap.size + 1;
   },
 };
 
@@ -443,6 +487,15 @@ const BackBtn = ({ onClick }) => (
 // ─── HOME SCREEN ─────────────────────────────────────────────────────────
 const Home = ({ onPick, stats, category, setCategory, direction, setDirection }) => {
   const [topScore, setTopScore] = useState(null);
+  const [showNewGamePopup, setShowNewGamePopup] = useState(() => {
+    try { return !localStorage.getItem(NEW_GAME_SEEN_KEY); }
+    catch { return false; }
+  });
+
+  const dismissPopup = () => {
+    setShowNewGamePopup(false);
+    try { localStorage.setItem(NEW_GAME_SEEN_KEY, "1"); } catch {}
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -497,6 +550,13 @@ const Home = ({ onPick, stats, category, setCategory, direction, setDirection })
       icon: "⚿",
       color: "var(--deep)",
     },
+    {
+      id: "reveal",
+      title: "Letter by Letter",
+      desc: "Blanks fill in over time. Answer before they do!",
+      icon: "❧",
+      color: "var(--sage)",
+    },
   ];
 
   const forwardLabel = category === "abbreviations" ? "State → Abbr" : "State → Capital";
@@ -504,6 +564,73 @@ const Home = ({ onPick, stats, category, setCategory, direction, setDirection })
 
   return (
     <div className="slide-up">
+      {/* New game popup */}
+      {showNewGamePopup && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-5"
+          style={{ background: "rgba(26,37,55,0.5)", backdropFilter: "blur(4px)" }}
+          onClick={dismissPopup}
+        >
+          <div
+            className="rounded-2xl p-6 max-w-sm w-full text-center fade-in"
+            style={{
+              background: "var(--cream)",
+              border: "3px solid var(--ink)",
+              boxShadow: "6px 6px 0 var(--ink)",
+              transform: "rotate(-1deg)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="font-display text-4xl mb-3"
+            >
+              {NEWEST_GAME.icon}
+            </div>
+            <div
+              className="inline-block px-3 py-1 mb-3 font-mono text-[9px] uppercase tracking-[0.3em] stamp"
+            >
+              New Game
+            </div>
+            <h3
+              className="font-display font-black text-2xl mb-2"
+              style={{ color: "var(--ink)", fontVariationSettings: '"SOFT" 100, "WONK" 1' }}
+            >
+              {NEWEST_GAME.title}
+            </h3>
+            <p
+              className="font-body text-sm mb-6"
+              style={{ color: "var(--dusty)" }}
+            >
+              {NEWEST_GAME.desc}
+            </p>
+            <div className="space-y-2">
+              <button
+                onClick={() => { dismissPopup(); onPick(NEWEST_GAME.id); }}
+                className="w-full rounded-2xl p-3 font-display font-bold text-lg transition active:scale-[0.98]"
+                style={{
+                  background: "var(--sage)",
+                  color: "var(--cream)",
+                  border: "2px solid var(--ink)",
+                  boxShadow: "3px 3px 0 var(--ink)",
+                }}
+              >
+                Try It
+              </button>
+              <button
+                onClick={dismissPopup}
+                className="w-full rounded-2xl p-2.5 font-mono text-xs uppercase tracking-widest"
+                style={{
+                  background: "transparent",
+                  color: "var(--ink)",
+                  border: "2px solid rgba(26,37,55,0.15)",
+                }}
+              >
+                Maybe Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="text-center mb-8 relative">
         <div
@@ -604,11 +731,14 @@ const Home = ({ onPick, stats, category, setCategory, direction, setDirection })
 
       {/* Mode cards */}
       <div className="space-y-3">
-        {modes.map((m, i) => (
+        {modes.map((m, i) => {
+          const isNewGame = m.id === NEWEST_GAME.id &&
+            (Date.now() - new Date(NEWEST_GAME.releaseDate).getTime()) < NEWEST_GAME.newBadgeDays * 86400000;
+          return (
           <button
             key={m.id}
             onClick={() => onPick(m.id)}
-            className="w-full text-left rounded-2xl p-5 flex items-center gap-4 transition active:scale-[0.98] hover:translate-x-1"
+            className="w-full text-left rounded-2xl p-5 flex items-center gap-4 transition active:scale-[0.98] hover:translate-x-1 relative"
             style={{
               background: "var(--paper)",
               border: `2px solid var(--ink)`,
@@ -616,6 +746,21 @@ const Home = ({ onPick, stats, category, setCategory, direction, setDirection })
               animation: `slideUp 0.5s ${i * 0.08}s both cubic-bezier(0.16, 1, 0.3, 1)`,
             }}
           >
+            {isNewGame && (
+              <div
+                className="absolute font-mono text-[9px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full"
+                style={{
+                  top: "-8px",
+                  right: "12px",
+                  background: "var(--rust)",
+                  color: "var(--cream)",
+                  border: "2px solid var(--ink)",
+                  transform: "rotate(3deg)",
+                }}
+              >
+                New
+              </div>
+            )}
             <div
               className="font-display text-3xl font-bold w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
               style={{ background: m.color, color: "var(--cream)" }}
@@ -657,7 +802,8 @@ const Home = ({ onPick, stats, category, setCategory, direction, setDirection })
               →
             </div>
           </button>
-        ))}
+          );
+        })}
       </div>
 
       {/* Leaderboard & Progress links */}
@@ -3233,6 +3379,586 @@ const Results = ({ result, onPlayAgain, onHome }) => {
   );
 };
 
+// ─── LETTER BY LETTER (REVEAL) ──────────────────────────────────────────
+const REVEAL_COUNT = 10;
+const REVEAL_INTERVAL = 3000;
+const REVEAL_MAX_POINTS = 10;
+
+const Reveal = ({ onExit, recordResult, category, direction: dir, onViewLeaderboard }) => {
+  const [deck] = useState(() => shuffle(STATES).slice(0, REVEAL_COUNT));
+  const [idx, setIdx] = useState(0);
+  const [score, setScore] = useState(0);
+  const [done, setDone] = useState(false);
+  const [input, setInput] = useState("");
+  const [flash, setFlash] = useState(null);
+  const inputRef = useRef(null);
+
+  // Countdown state
+  const [countdown, setCountdown] = useState("Ready?");
+
+  useEffect(() => {
+    if (countdown === null) return;
+    const steps = { "Ready?": "3", "3": "2", "2": "1", "1": "GO!", "GO!": null };
+    const delay = countdown === "Ready?" ? 1000 : countdown === "GO!" ? 600 : 800;
+    const t = setTimeout(() => setCountdown(steps[countdown]), delay);
+    return () => clearTimeout(t);
+  }, [countdown]);
+
+  // Per-question reveal state
+  const current = deck[Math.min(idx, deck.length - 1)];
+  const qa = getQA(current, category, dir);
+  const answer = qa.answer;
+  const answerLetters = answer.split("");
+
+  // Track which letter indices have been revealed
+  const [revealed, setRevealed] = useState([]);
+  const [points, setPoints] = useState(REVEAL_MAX_POINTS);
+
+  // Initialize revealed set: pre-reveal spaces, hyphens, dots
+  useEffect(() => {
+    if (done) return;
+    const initial = [];
+    answerLetters.forEach((ch, i) => {
+      if (ch === " " || ch === "-" || ch === ".") initial.push(i);
+    });
+    setRevealed(initial);
+    setPoints(REVEAL_MAX_POINTS);
+    setInput("");
+    if (inputRef.current) inputRef.current.focus();
+  }, [idx, done]);
+
+  // Reveal timer: reveal one random hidden letter every interval
+  useEffect(() => {
+    if (countdown !== null || done || flash) return;
+    const hiddenIndices = answerLetters
+      .map((_, i) => i)
+      .filter((i) => !revealed.includes(i));
+    if (hiddenIndices.length === 0) {
+      // All revealed, score 0, move on
+      setFlash("timeout");
+      setRevealed(answerLetters.map((_, i) => i));
+      recordResult(false);
+      statsStore.record(current.s, false, "reveal");
+      setTimeout(() => {
+        setFlash(null);
+        if (idx + 1 >= deck.length) {
+          setDone(true);
+          ga("reveal_complete", { score, category });
+        } else {
+          setIdx((i) => i + 1);
+        }
+      }, 1200);
+      return;
+    }
+    const t = setTimeout(() => {
+      const pick = hiddenIndices[Math.floor(Math.random() * hiddenIndices.length)];
+      setRevealed((r) => [...r, pick]);
+      setPoints((p) => Math.max(0, p - 1));
+    }, REVEAL_INTERVAL);
+    return () => clearTimeout(t);
+  }, [revealed, done, flash, idx, countdown]);
+
+  const submit = () => {
+    if (countdown !== null || done || flash || !input.trim()) return;
+    const right = input.trim().toLowerCase() === answer.toLowerCase();
+    if (!right) {
+      // Wrong guess — flash "not quite" but keep playing
+      setFlash("wrong");
+      setInput("");
+      setTimeout(() => {
+        setFlash(null);
+        if (inputRef.current) inputRef.current.focus();
+      }, 600);
+      return;
+    }
+    // Correct — reveal all letters, record, advance
+    setFlash("right");
+    setRevealed(answerLetters.map((_, i) => i));
+    recordResult(true);
+    statsStore.record(current.s, true, "reveal");
+    setScore((s) => s + points);
+    setTimeout(() => {
+      setFlash(null);
+      if (idx + 1 >= deck.length) {
+        setDone(true);
+        ga("reveal_complete", { score: score + points, category });
+      } else {
+        setIdx((i) => i + 1);
+      }
+    }, 800);
+  };
+
+  // Leaderboard submission state
+  const [posted, setPosted] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [rank, setRank] = useState(null);
+  const [nickInput, setNickInput] = useState("");
+  const [showNickInput, setShowNickInput] = useState(false);
+  const [profanityError, setProfanityError] = useState(false);
+  const [showNamePicker, setShowNamePicker] = useState(false);
+
+  const handlePost = async (name) => {
+    if (posting || posted) return;
+    if (filter.check(name)) {
+      setProfanityError(true);
+      setShowNickInput(true);
+      setNickInput(name);
+      return;
+    }
+    setProfanityError(false);
+    setPosting(true);
+    try {
+      leaderboard.setNickname(name);
+      await revealLeaderboard.submit(name, score, category);
+      const r = await revealLeaderboard.getRank(score, category);
+      setRank(r);
+      setPosted(true);
+      ga("reveal_leaderboard_submit", { score, category, rank: r });
+    } catch (e) {
+      console.error("Reveal leaderboard submit failed:", e);
+    }
+    setPosting(false);
+  };
+
+  const savedNames = leaderboard.getAllNicknames().filter((n) => !filter.check(n));
+
+  const startPost = () => {
+    if (savedNames.length > 0) {
+      setShowNamePicker(true);
+    } else {
+      setShowNickInput(true);
+      setNickInput("");
+    }
+  };
+
+  const catLabel = category === "abbreviations" ? "Abbreviations" : "Capitals";
+
+  if (done) {
+    const maxScore = REVEAL_COUNT * REVEAL_MAX_POINTS;
+    return (
+      <div className="fade-in text-center py-8">
+        <div
+          className="font-mono text-[10px] uppercase tracking-[0.3em] mb-3"
+          style={{ color: "var(--dusty)" }}
+        >
+          Round Complete
+        </div>
+        <div
+          className="font-display font-black leading-none mb-2"
+          style={{ fontSize: "clamp(5rem, 25vw, 9rem)", color: "var(--rust)" }}
+        >
+          {score}
+        </div>
+        <div
+          className="font-display italic text-xl mb-8"
+          style={{ color: "var(--ink)" }}
+        >
+          out of {maxScore}
+        </div>
+        <div
+          className="inline-block px-4 py-2 stamp font-mono text-xs"
+          style={{ marginBottom: "2rem" }}
+        >
+          {score >= maxScore
+            ? "★ NIFTY FIFTY ★"
+            : score >= 80
+            ? "★ EXTRAORDINARY ★"
+            : score >= 50
+            ? "★ SHARP ★"
+            : score >= 30
+            ? "★ SOLID ★"
+            : "★ KEEP GOING ★"}
+        </div>
+
+        {score > 0 && (
+          <div className="mb-6">
+            {posted ? (
+              <div className="fade-in">
+                <div
+                  className="rounded-2xl p-4 mb-2"
+                  style={{ background: "rgba(107,142,111,0.12)", border: "2px solid var(--sage)" }}
+                >
+                  <div
+                    className="font-mono text-xs uppercase tracking-widest"
+                    style={{ color: "var(--sage)" }}
+                  >
+                    ✓ Posted to Leaderboard
+                  </div>
+                  {rank && (
+                    <div
+                      className="font-display font-bold text-lg mt-1"
+                      style={{ color: "var(--ink)" }}
+                    >
+                      You're #{rank} on {catLabel}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={onViewLeaderboard}
+                  className="w-full rounded-xl py-2.5 font-mono text-xs uppercase tracking-widest transition hover:opacity-70"
+                  style={{ color: "var(--ink)", border: "2px solid rgba(26,37,55,0.15)" }}
+                >
+                  View Leaderboard
+                </button>
+              </div>
+            ) : showNamePicker && savedNames.length > 0 ? (
+              <div className="fade-in">
+                <div
+                  className="rounded-2xl p-4"
+                  style={{ background: "var(--paper)", border: "2px solid var(--ink)" }}
+                >
+                  <div
+                    className="font-mono text-[10px] uppercase tracking-widest mb-3"
+                    style={{ color: "var(--dusty)" }}
+                  >
+                    Who's Playing?
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {savedNames.map((name) => (
+                      <button
+                        key={name}
+                        onClick={() => handlePost(name)}
+                        disabled={posting}
+                        className="rounded-xl px-4 py-2 font-display font-bold text-sm transition active:scale-[0.96]"
+                        style={{
+                          background: "var(--gold)",
+                          color: "var(--ink)",
+                          border: "2px solid var(--ink)",
+                          boxShadow: "2px 2px 0 var(--ink)",
+                        }}
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => { setShowNamePicker(false); setShowNickInput(true); setNickInput(""); }}
+                    className="font-mono text-[10px] uppercase tracking-widest transition hover:opacity-70"
+                    style={{ color: "var(--dusty)" }}
+                  >
+                    Someone else? →
+                  </button>
+                </div>
+              </div>
+            ) : showNickInput ? (
+              <div className="fade-in">
+                <div
+                  className="rounded-2xl p-4"
+                  style={{ background: "var(--paper)", border: "2px solid var(--ink)" }}
+                >
+                  <div
+                    className="font-mono text-[10px] uppercase tracking-widest mb-3"
+                    style={{ color: "var(--dusty)" }}
+                  >
+                    Choose a Nickname
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={nickInput}
+                      onChange={(e) => { setNickInput(e.target.value.slice(0, 15)); setProfanityError(false); }}
+                      placeholder="Your name..."
+                      autoFocus
+                      className="flex-1 rounded-xl px-3 py-2 font-body text-sm outline-none"
+                      style={{
+                        background: "rgba(26,37,55,0.06)",
+                        color: "var(--ink)",
+                        border: "2px solid rgba(26,37,55,0.15)",
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && nickInput.trim().length >= 3)
+                          handlePost(nickInput.trim());
+                      }}
+                    />
+                    <button
+                      onClick={() => handlePost(nickInput.trim())}
+                      disabled={nickInput.trim().length < 3 || posting}
+                      className="rounded-xl px-4 py-2 font-mono text-xs uppercase tracking-widest font-bold transition"
+                      style={{
+                        background: nickInput.trim().length >= 3 ? "var(--ink)" : "rgba(26,37,55,0.1)",
+                        color: nickInput.trim().length >= 3 ? "var(--cream)" : "var(--dusty)",
+                      }}
+                    >
+                      {posting ? "..." : "Post"}
+                    </button>
+                  </div>
+                  {profanityError ? (
+                    <div className="font-mono text-[10px] mt-1" style={{ color: "var(--rust)" }}>
+                      Please choose an appropriate nickname
+                    </div>
+                  ) : (
+                    <div className="font-mono text-[10px] mt-1" style={{ color: "var(--dusty)" }}>
+                      3-15 characters
+                    </div>
+                  )}
+                  {savedNames.length > 0 && (
+                    <button
+                      onClick={() => { setShowNickInput(false); setShowNamePicker(true); }}
+                      className="font-mono text-[10px] uppercase tracking-widest mt-2 transition hover:opacity-70"
+                      style={{ color: "var(--dusty)" }}
+                    >
+                      ← Back to names
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={startPost}
+                disabled={posting}
+                className="w-full rounded-2xl p-4 font-display font-bold text-lg transition active:scale-[0.98]"
+                style={{
+                  background: "var(--gold)",
+                  color: "var(--ink)",
+                  border: "2px solid var(--ink)",
+                  boxShadow: "3px 3px 0 var(--ink)",
+                }}
+              >
+                {posting ? "Posting..." : "Post to Leaderboard"}
+              </button>
+            )}
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <button
+            onClick={() => {
+              setIdx(0);
+              setScore(0);
+              setDone(false);
+              setCountdown("Ready?");
+              setPosted(false);
+              setRank(null);
+              setShowNickInput(false);
+              setShowNamePicker(false);
+            }}
+            className="w-full rounded-2xl p-4 font-display font-bold text-lg"
+            style={{
+              background: "var(--rust)",
+              color: "var(--cream)",
+              border: "2px solid var(--ink)",
+              boxShadow: "3px 3px 0 var(--ink)",
+            }}
+          >
+            Run It Back
+          </button>
+          <button
+            onClick={() => onExit(null)}
+            className="w-full rounded-2xl p-4 font-mono text-xs uppercase tracking-widest"
+            style={{
+              background: "transparent",
+              color: "var(--ink)",
+              border: "2px solid var(--ink)",
+            }}
+          >
+            Back to Menu
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (countdown !== null) {
+    const boxStyles = {
+      "Ready?": { rotate: "-2deg", borderColor: "var(--ink)", background: "var(--cream)" },
+      "3": { rotate: "3deg", borderColor: "var(--ink)", background: "var(--paper)" },
+      "2": { rotate: "-4deg", borderColor: "var(--rust)", background: "var(--cream)" },
+      "1": { rotate: "2.5deg", borderColor: "var(--gold)", background: "var(--paper)" },
+      "GO!": { rotate: "-3deg", borderColor: "var(--rust)", background: "rgba(196,78,71,0.08)" },
+    };
+    const bs = boxStyles[countdown];
+    return (
+      <div className="fade-in" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
+        <div
+          key={countdown}
+          style={{
+            border: `3px solid ${bs.borderColor}`,
+            background: bs.background,
+            boxShadow: "4px 4px 0 var(--ink)",
+            borderRadius: "1rem",
+            padding: countdown === "Ready?" ? "1.5rem 2.5rem" : "1rem 2.5rem",
+            transform: `rotate(${bs.rotate})`,
+            animation: "countdownPop 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+          }}
+        >
+          <div
+            className="font-display font-black text-center"
+            style={{
+              fontSize: countdown === "Ready?" ? "clamp(2.5rem, 12vw, 4.5rem)" : countdown === "GO!" ? "clamp(4rem, 20vw, 8rem)" : "clamp(5rem, 25vw, 10rem)",
+              color: countdown === "GO!" ? "var(--rust)" : "var(--ink)",
+              fontVariationSettings: '"SOFT" 100, "WONK" 1',
+              fontStyle: countdown === "GO!" ? "italic" : "normal",
+              lineHeight: 1,
+            }}
+          >
+            {countdown}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const darkFlash = flash === "right" || flash === "timeout";
+  const flashBg =
+    flash === "right" ? "var(--sage)" : flash === "timeout" ? "var(--rust)" : flash === "wrong" ? "rgba(196,78,71,0.15)" : null;
+
+  return (
+    <div className="fade-in">
+      <div className="flex items-center justify-between mb-6">
+        <BackBtn onClick={() => onExit(null)} />
+        <div className="flex gap-2 items-center">
+          <div
+            className="font-mono text-sm px-3 py-1.5 rounded-full font-bold"
+            style={{ background: "var(--ink)", color: "var(--cream)" }}
+          >
+            {idx + 1}/{REVEAL_COUNT}
+          </div>
+          <div
+            className="font-mono text-sm px-3 py-1.5 rounded-full font-bold"
+            style={{ background: "var(--gold)", color: "var(--ink)" }}
+          >
+            {score}
+          </div>
+        </div>
+      </div>
+
+      {/* Points remaining for this question */}
+      <div className="text-center mb-2">
+        <div
+          className="inline-block font-mono text-xs font-bold px-3 py-1 rounded-full"
+          style={{
+            background: points >= 7 ? "var(--gold)" : points >= 4 ? "rgba(217,164,65,0.3)" : "rgba(196,78,71,0.15)",
+            color: points >= 7 ? "var(--ink)" : points >= 4 ? "var(--ink)" : "var(--rust)",
+          }}
+        >
+          {points} {points === 1 ? "point" : "points"}
+        </div>
+      </div>
+
+      {/* Question */}
+      <div
+        className="text-center mb-6 transition-colors duration-200 rounded-2xl py-6 px-4"
+        style={{ background: flashBg || "transparent" }}
+      >
+        <div
+          className="font-mono text-[10px] uppercase tracking-[0.3em] mb-2"
+          style={{ color: darkFlash ? "var(--cream)" : "var(--dusty)" }}
+        >
+          {qa.qLabel}
+        </div>
+        <div
+          className="font-display font-black leading-tight mb-6"
+          style={{
+            fontSize: "clamp(1.8rem, 8vw, 2.8rem)",
+            color: darkFlash ? "var(--cream)" : "var(--ink)",
+          }}
+        >
+          {qa.question}
+        </div>
+
+        {/* Letter blanks */}
+        <div className="flex flex-wrap justify-center gap-1.5 mb-6">
+          {(() => {
+            // Group letters into words so words don't break across lines
+            const words = [];
+            let wordStart = 0;
+            answerLetters.forEach((ch, i) => {
+              if (ch === " ") {
+                if (i > wordStart) words.push({ start: wordStart, end: i });
+                words.push({ start: i, end: i + 1, isSpace: true });
+                wordStart = i + 1;
+              }
+            });
+            if (wordStart < answerLetters.length) words.push({ start: wordStart, end: answerLetters.length });
+
+            return words.map((word, wi) => {
+              if (word.isSpace) return <div key={`sp-${wi}`} style={{ width: "0.75rem" }} />;
+              return (
+                <span key={`w-${wi}`} className="inline-flex gap-1.5" style={{ flexWrap: "nowrap" }}>
+                  {answerLetters.slice(word.start, word.end).map((ch, j) => {
+                    const i = word.start + j;
+                    const isRevealed = revealed.includes(i);
+                    return (
+                      <div
+                        key={i}
+                        className={`font-display font-bold text-lg flex items-center justify-center rounded-lg ${isRevealed && ![".", "-"].includes(ch) ? "pop" : ""}`}
+                        style={{
+                          width: "2rem",
+                          height: "2.5rem",
+                          background: isRevealed
+                            ? darkFlash ? "rgba(255,255,255,0.2)" : "rgba(26,37,55,0.08)"
+                            : darkFlash ? "rgba(255,255,255,0.1)" : "rgba(26,37,55,0.04)",
+                          border: `2px solid ${isRevealed
+                            ? darkFlash ? "rgba(255,255,255,0.3)" : "rgba(26,37,55,0.2)"
+                            : darkFlash ? "rgba(255,255,255,0.15)" : "rgba(26,37,55,0.1)"}`,
+                          color: darkFlash ? "var(--cream)" : "var(--ink)",
+                        }}
+                      >
+                        {isRevealed ? ch.toUpperCase() : ""}
+                      </div>
+                    );
+                  })}
+                </span>
+              );
+            });
+          })()}
+        </div>
+
+        {/* Flash feedback text */}
+        {flash === "right" && (
+          <div className="font-mono text-xs uppercase tracking-widest" style={{ color: "var(--cream)" }}>
+            +{points} points!
+          </div>
+        )}
+        {flash === "wrong" && (
+          <div className="font-mono text-xs uppercase tracking-widest" style={{ color: "var(--rust)" }}>
+            Not quite!
+          </div>
+        )}
+        {flash === "timeout" && (
+          <div className="font-mono text-xs uppercase tracking-widest" style={{ color: "var(--cream)" }}>
+            {answer}
+          </div>
+        )}
+      </div>
+
+      {/* Input */}
+      {(!flash || flash === "wrong") && (
+        <div className="flex gap-2">
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={`Type the ${qa.aLabel.toLowerCase()}...`}
+            autoFocus
+            className="flex-1 rounded-xl px-4 py-3 font-body text-base outline-none"
+            style={{
+              background: "var(--paper)",
+              color: "var(--ink)",
+              border: "2px solid var(--ink)",
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submit();
+            }}
+          />
+          <button
+            onClick={submit}
+            disabled={!input.trim()}
+            className="rounded-xl px-5 py-3 font-mono text-xs uppercase tracking-widest font-bold transition"
+            style={{
+              background: input.trim() ? "var(--ink)" : "rgba(26,37,55,0.1)",
+              color: input.trim() ? "var(--cream)" : "var(--dusty)",
+            }}
+          >
+            Go
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── LEADERBOARD ────────────────────────────────────────────────────────
 const timeAgo = (timestamp) => {
   if (!timestamp) return "";
@@ -3250,6 +3976,7 @@ const timeAgo = (timestamp) => {
 const PAGE_SIZE = 20;
 
 const Leaderboard = ({ onBack }) => {
+  const [mode, setMode] = useState("dash"); // dash | reveal
   const [cat, setCat] = useState("capitals");
   const [scores, setScores] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -3261,10 +3988,13 @@ const Leaderboard = ({ onBack }) => {
   const [nickInput, setNickInput] = useState(nickname);
   const [nickError, setNickError] = useState(false);
 
-  const fetchScores = useCallback(async (category) => {
+  const lb = mode === "reveal" ? revealLeaderboard : leaderboard;
+  const perfectScore = mode === "reveal" ? 100 : 50;
+
+  const fetchScores = useCallback(async (category, board) => {
     setLoading(true);
     try {
-      const { entries, lastDoc: last } = await leaderboard.getTop(category, PAGE_SIZE);
+      const { entries, lastDoc: last } = await board.getTop(category, PAGE_SIZE);
       setScores(entries);
       setLastDoc(last);
       setHasMore(entries.length === PAGE_SIZE);
@@ -3281,7 +4011,7 @@ const Leaderboard = ({ onBack }) => {
     if (!lastDoc || loadingMore) return;
     setLoadingMore(true);
     try {
-      const { entries, lastDoc: last } = await leaderboard.getTop(cat, PAGE_SIZE, lastDoc);
+      const { entries, lastDoc: last } = await lb.getTop(cat, PAGE_SIZE, lastDoc);
       setScores((prev) => [...prev, ...entries]);
       setLastDoc(last);
       setHasMore(entries.length === PAGE_SIZE);
@@ -3292,8 +4022,8 @@ const Leaderboard = ({ onBack }) => {
   };
 
   useEffect(() => {
-    fetchScores(cat);
-  }, [cat, fetchScores]);
+    fetchScores(cat, lb);
+  }, [cat, mode, fetchScores]);
 
   const saveNickname = () => {
     const name = nickInput.trim();
@@ -3327,16 +4057,39 @@ const Leaderboard = ({ onBack }) => {
         </div>
       </div>
 
-      <div className="text-center mb-6">
+      <div className="text-center mb-4">
         <h2
           className="font-display font-black text-3xl leading-tight mb-1"
           style={{ color: "var(--ink)", fontVariationSettings: '"SOFT" 100, "WONK" 1' }}
         >
-          60-Second Dash
+          {mode === "dash" ? "60-Second Dash" : "Letter by Letter"}
         </h2>
         <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: "var(--dusty)" }}>
           Top scores
         </div>
+      </div>
+
+      {/* Game mode tabs */}
+      <div
+        className="flex rounded-full mb-4 overflow-hidden"
+        style={{ border: "2px solid var(--ink)" }}
+      >
+        {[
+          { id: "dash", label: "Dash" },
+          { id: "reveal", label: "Letter" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setMode(tab.id)}
+            className="flex-1 py-2 font-mono text-xs uppercase tracking-widest transition-colors"
+            style={{
+              background: mode === tab.id ? "var(--ink)" : "transparent",
+              color: mode === tab.id ? "var(--cream)" : "var(--ink)",
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Category tabs */}
@@ -3390,14 +4143,14 @@ const Leaderboard = ({ onBack }) => {
             className="font-mono text-[10px] uppercase tracking-widest"
             style={{ color: "var(--dusty)" }}
           >
-            Be the first! Play 60-Second Dash.
+            Be the first! Play {mode === "dash" ? "60-Second Dash" : "Letter by Letter"}.
           </div>
         </div>
       ) : (
         <div className="space-y-2">
           {scores.map((entry, i) => {
             const isYou = nickname && entry.name === nickname;
-            const isPerfect = entry.score >= 50;
+            const isPerfect = entry.score >= perfectScore;
             return (
               <div
                 key={entry.id}
@@ -4044,7 +4797,7 @@ export default function App() {
             direction={direction}
             setDirection={setDirection}
             onPick={(id) => {
-              if (["quiz", "type", "speed", "study", "match", "escape"].includes(id)) {
+              if (["quiz", "type", "speed", "study", "match", "escape", "reveal"].includes(id)) {
                 ga("game_mode_start", { mode: id, category, direction });
               }
               if (id === "quiz") setScreen("quiz");
@@ -4053,6 +4806,7 @@ export default function App() {
               if (id === "study") setScreen("study");
               if (id === "match") setScreen("matchConfig");
               if (id === "escape") setScreen("escapeConfig");
+              if (id === "reveal") setScreen("reveal");
               if (id === "leaderboard") setScreen("leaderboard");
               if (id === "progress") setScreen("progress");
             }}
@@ -4076,6 +4830,9 @@ export default function App() {
         )}
         {screen === "speed" && (
           <Speed onExit={handleExit("speed")} recordResult={recordResult} onViewLeaderboard={() => setScreen("leaderboard")} {...modeProps} />
+        )}
+        {screen === "reveal" && (
+          <Reveal onExit={handleExit("reveal")} recordResult={recordResult} onViewLeaderboard={() => setScreen("leaderboard")} {...modeProps} />
         )}
         {screen === "study" && (
           <Study
