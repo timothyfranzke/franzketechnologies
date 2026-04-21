@@ -3392,6 +3392,7 @@ const Reveal = ({ onExit, recordResult, category, direction: dir, onViewLeaderbo
   const [input, setInput] = useState("");
   const [flash, setFlash] = useState(null);
   const inputRef = useRef(null);
+  const advancingRef = useRef(false);
 
   // Countdown state
   const [countdown, setCountdown] = useState("Ready?");
@@ -3416,6 +3417,7 @@ const Reveal = ({ onExit, recordResult, category, direction: dir, onViewLeaderbo
 
   // Initialize revealed set: pre-reveal spaces, hyphens, dots
   useEffect(() => {
+    advancingRef.current = false;
     if (done) return;
     const initial = [];
     answerLetters.forEach((ch, i) => {
@@ -3436,6 +3438,7 @@ const Reveal = ({ onExit, recordResult, category, direction: dir, onViewLeaderbo
     if (hiddenIndices.length === 0) {
       // All revealed, score 0, move on
       setFlash("timeout");
+      advancingRef.current = true;
       setRevealed(answerLetters.map((_, i) => i));
       recordResult(false);
       statsStore.record(current.s, false, "reveal");
@@ -3459,7 +3462,7 @@ const Reveal = ({ onExit, recordResult, category, direction: dir, onViewLeaderbo
   }, [revealed, done, flash, idx, countdown]);
 
   const submit = () => {
-    if (countdown !== null || done || flash || !input.trim()) return;
+    if (advancingRef.current || countdown !== null || done || flash || !input.trim()) return;
     const right = input.trim().toLowerCase() === answer.toLowerCase();
     if (!right) {
       // Wrong guess — flash "not quite" but keep playing
@@ -3473,6 +3476,7 @@ const Reveal = ({ onExit, recordResult, category, direction: dir, onViewLeaderbo
     }
     // Correct — reveal all letters, record, advance
     setFlash("right");
+    advancingRef.current = true;
     setRevealed(answerLetters.map((_, i) => i));
     recordResult(true);
     statsStore.record(current.s, true, "reveal");
