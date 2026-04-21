@@ -507,34 +507,13 @@ const Home = ({ onPick, stats, category, setCategory, direction, setDirection })
   }, [category]);
 
   const catLabel = category === "abbreviations" ? "Abbreviation" : "Capital";
-  const modes = [
-    {
-      id: "quiz",
-      title: "Quick Quiz",
-      desc: `Four choices. Pick the right ${catLabel.toLowerCase()}.`,
-      icon: "◆",
-      color: "var(--rust)",
-    },
-    {
-      id: "type",
-      title: "Type It",
-      desc: `No hints. Spell the ${catLabel.toLowerCase()} yourself.`,
-      icon: "✎",
-      color: "var(--ink)",
-    },
+  const games = [
     {
       id: "speed",
       title: "60-Second Dash",
       desc: "How many can you nail in a minute?",
       icon: "⚡",
       color: "var(--gold)",
-    },
-    {
-      id: "study",
-      title: "Flashcards",
-      desc: "Flip through all 50 at your pace.",
-      icon: "❋",
-      color: "var(--sage)",
     },
     {
       id: "match",
@@ -555,6 +534,29 @@ const Home = ({ onPick, stats, category, setCategory, direction, setDirection })
       title: "Letter by Letter",
       desc: "Blanks fill in over time. Answer before they do!",
       icon: "❧",
+      color: "var(--sage)",
+    },
+  ];
+  const studyModes = [
+    {
+      id: "quiz",
+      title: "Quick Quiz",
+      desc: `Four choices. Pick the right ${catLabel.toLowerCase()}.`,
+      icon: "◆",
+      color: "var(--rust)",
+    },
+    {
+      id: "type",
+      title: "Type It",
+      desc: `No hints. Spell the ${catLabel.toLowerCase()} yourself.`,
+      icon: "✎",
+      color: "var(--ink)",
+    },
+    {
+      id: "study",
+      title: "Flashcards",
+      desc: "Flip through all 50 at your pace.",
+      icon: "❋",
       color: "var(--sage)",
     },
   ];
@@ -729,9 +731,15 @@ const Home = ({ onPick, stats, category, setCategory, direction, setDirection })
         </div>
       )}
 
-      {/* Mode cards */}
-      <div className="space-y-3">
-        {modes.map((m, i) => {
+      {/* Games section */}
+      <div
+        className="font-mono text-[10px] uppercase tracking-[0.3em] mb-3"
+        style={{ color: "var(--dusty)" }}
+      >
+        ★ Games
+      </div>
+      <div className="space-y-3 mb-8">
+        {games.map((m, i) => {
           const isNewGame = m.id === NEWEST_GAME.id &&
             (Date.now() - new Date(NEWEST_GAME.releaseDate).getTime()) < NEWEST_GAME.newBadgeDays * 86400000;
           return (
@@ -804,6 +812,56 @@ const Home = ({ onPick, stats, category, setCategory, direction, setDirection })
           </button>
           );
         })}
+      </div>
+
+      {/* Study section */}
+      <div
+        className="font-mono text-[10px] uppercase tracking-[0.3em] mb-3"
+        style={{ color: "var(--dusty)" }}
+      >
+        ★ Study
+      </div>
+      <div className="space-y-3">
+        {studyModes.map((m, i) => (
+          <button
+            key={m.id}
+            onClick={() => onPick(m.id)}
+            className="w-full text-left rounded-2xl p-5 flex items-center gap-4 transition active:scale-[0.98] hover:translate-x-1"
+            style={{
+              background: "var(--paper)",
+              border: `2px solid var(--ink)`,
+              boxShadow: `4px 4px 0 var(--ink)`,
+              animation: `slideUp 0.5s ${(i + games.length) * 0.08}s both cubic-bezier(0.16, 1, 0.3, 1)`,
+            }}
+          >
+            <div
+              className="font-display text-3xl font-bold w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ background: m.color, color: "var(--cream)" }}
+            >
+              {m.icon}
+            </div>
+            <div className="flex-1">
+              <div
+                className="font-display font-bold text-xl leading-tight"
+                style={{ color: "var(--ink)" }}
+              >
+                {m.title}
+              </div>
+              <div
+                className="font-body text-sm opacity-70"
+                style={{ color: "var(--ink)" }}
+              >
+                {m.desc}
+              </div>
+            </div>
+            <div
+              className="font-mono text-xl"
+              style={{ color: "var(--ink)" }}
+            >
+              →
+            </div>
+          </button>
+        ))}
       </div>
 
       {/* Leaderboard & Progress links */}
@@ -3393,6 +3451,7 @@ const Reveal = ({ onExit, recordResult, category, direction: dir, onViewLeaderbo
   const [flash, setFlash] = useState(null);
   const inputRef = useRef(null);
   const advancingRef = useRef(false);
+  const settlingRef = useRef(false);
 
   // Countdown state
   const [countdown, setCountdown] = useState("Ready?");
@@ -3418,6 +3477,7 @@ const Reveal = ({ onExit, recordResult, category, direction: dir, onViewLeaderbo
   // Initialize revealed set: pre-reveal spaces, hyphens, dots
   useEffect(() => {
     advancingRef.current = false;
+    settlingRef.current = true;
     if (done) return;
     const initial = [];
     answerLetters.forEach((ch, i) => {
@@ -3429,9 +3489,14 @@ const Reveal = ({ onExit, recordResult, category, direction: dir, onViewLeaderbo
     if (inputRef.current) inputRef.current.focus();
   }, [idx, done]);
 
+  // Clear settling flag once revealed state has been updated for the new question
+  useEffect(() => {
+    settlingRef.current = false;
+  }, [revealed]);
+
   // Reveal timer: reveal one random hidden letter every interval
   useEffect(() => {
-    if (countdown !== null || done || flash) return;
+    if (settlingRef.current || countdown !== null || done || flash) return;
     const hiddenIndices = answerLetters
       .map((_, i) => i)
       .filter((i) => !revealed.includes(i));
@@ -3861,7 +3926,7 @@ const Reveal = ({ onExit, recordResult, category, direction: dir, onViewLeaderbo
         </div>
 
         {/* Letter blanks */}
-        <div className="flex flex-wrap justify-center gap-1.5 mb-6">
+        <div className="flex flex-wrap justify-center gap-1 mb-6">
           {(() => {
             // Group letters into words so words don't break across lines
             const words = [];
@@ -3875,20 +3940,26 @@ const Reveal = ({ onExit, recordResult, category, direction: dir, onViewLeaderbo
             });
             if (wordStart < answerLetters.length) words.push({ start: wordStart, end: answerLetters.length });
 
+            // Scale tile size based on longest word to prevent overflow
+            const longestWord = Math.max(...words.filter(w => !w.isSpace).map(w => w.end - w.start));
+            const tileSize = longestWord > 10 ? "1.5rem" : longestWord > 7 ? "1.75rem" : "2rem";
+            const tileHeight = longestWord > 10 ? "1.9rem" : longestWord > 7 ? "2.2rem" : "2.5rem";
+            const fontSize = longestWord > 10 ? "text-sm" : longestWord > 7 ? "text-base" : "text-lg";
+
             return words.map((word, wi) => {
-              if (word.isSpace) return <div key={`sp-${wi}`} style={{ width: "0.75rem" }} />;
+              if (word.isSpace) return <div key={`sp-${wi}`} style={{ width: "0.5rem" }} />;
               return (
-                <span key={`w-${wi}`} className="inline-flex gap-1.5" style={{ flexWrap: "nowrap" }}>
+                <span key={`w-${wi}`} className="inline-flex gap-1" style={{ flexWrap: "nowrap" }}>
                   {answerLetters.slice(word.start, word.end).map((ch, j) => {
                     const i = word.start + j;
                     const isRevealed = revealed.includes(i);
                     return (
                       <div
                         key={i}
-                        className={`font-display font-bold text-lg flex items-center justify-center rounded-lg ${isRevealed && ![".", "-"].includes(ch) ? "pop" : ""}`}
+                        className={`font-display font-bold ${fontSize} flex items-center justify-center rounded-lg ${isRevealed && ![".", "-"].includes(ch) ? "pop" : ""}`}
                         style={{
-                          width: "2rem",
-                          height: "2.5rem",
+                          width: tileSize,
+                          height: tileHeight,
                           background: isRevealed
                             ? darkFlash ? "rgba(255,255,255,0.2)" : "rgba(26,37,55,0.08)"
                             : darkFlash ? "rgba(255,255,255,0.1)" : "rgba(26,37,55,0.04)",
