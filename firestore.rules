@@ -1,0 +1,20 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Clients collection — authenticated users only
+    match /clients/{clientId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Rate limits — authenticated users only
+    match /rateLimits/{clientId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Speed scores — open for the games
+    match /speed-scores/{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
