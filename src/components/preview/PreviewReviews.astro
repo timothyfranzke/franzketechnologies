@@ -1,0 +1,126 @@
+---
+import type { ProspectSite } from "../../lib/preview/schema";
+import { paletteFor } from "../../lib/preview/palette";
+
+interface Props {
+  data: ProspectSite;
+}
+
+const { data } = Astro.props;
+const palette = paletteFor(data.vertical);
+const quotes = data.reviewQuotes.slice(0, 3);
+const filledStars = Math.round(data.rating);
+---
+
+<section class="preview-reviews" style={`--accent: ${palette.accent}; --paper: ${palette.paper}; --ink: ${palette.ink};`}>
+  <div class="preview-reviews-inner">
+    <p class="preview-eyebrow">Reviews</p>
+    <h2 class="preview-section-title">Why customers love us</h2>
+    <div class="preview-rating">
+      <span class="preview-stars" aria-hidden="true">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <span class={i < filledStars ? "is-filled" : ""}>★</span>
+        ))}
+      </span>
+      <span class="preview-rating-text">
+        <strong>{data.rating.toFixed(1)}</strong> · {data.reviewCount} Google reviews
+      </span>
+    </div>
+    {quotes.length > 0 && (
+      <ul class="preview-quotes">
+        {quotes.map((q) => (
+          <li class="preview-quote">
+            <blockquote>&ldquo;{q.text}&rdquo;</blockquote>
+            {q.author && <cite>— {q.author}</cite>}
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</section>
+
+<style>
+  .preview-reviews {
+    padding: 80px 24px;
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  .preview-reviews-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .preview-eyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 14px;
+  }
+
+  .preview-section-title {
+    font-family: "Bebas Neue", "Poppins", sans-serif;
+    font-size: clamp(2.2rem, 5vw, 3.2rem);
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    margin: 0 0 24px;
+  }
+
+  .preview-rating {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 48px;
+    flex-wrap: wrap;
+  }
+
+  .preview-stars {
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+    color: #d1d5db;
+  }
+
+  .preview-stars .is-filled {
+    color: #f59e0b;
+  }
+
+  .preview-rating-text {
+    font-size: 1rem;
+  }
+
+  .preview-rating-text strong {
+    font-size: 1.15rem;
+  }
+
+  .preview-quotes {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+  }
+
+  .preview-quote {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-left: 3px solid var(--accent);
+    padding: 28px;
+    border-radius: 4px;
+  }
+
+  .preview-quote blockquote {
+    margin: 0 0 14px;
+    font-size: 1.05rem;
+    line-height: 1.55;
+    font-style: italic;
+  }
+
+  .preview-quote cite {
+    font-style: normal;
+    font-size: 0.85rem;
+    color: rgba(0, 0, 0, 0.6);
+  }
+</style>

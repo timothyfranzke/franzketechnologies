@@ -1,0 +1,95 @@
+---
+import type { ProspectSite } from "../../lib/preview/schema";
+
+interface Props {
+  data: ProspectSite;
+}
+
+const { data } = Astro.props;
+const year = new Date().getFullYear();
+---
+
+<footer class="preview-footer">
+  <div class="preview-footer-inner">
+    <div class="preview-footer-business">
+      <p class="preview-footer-name">{data.name}</p>
+      {data.address && <p class="preview-footer-address">{data.address}</p>}
+      {data.phone && <p class="preview-footer-phone">{data.phone}</p>}
+    </div>
+    <div class="preview-footer-meta">
+      <p class="preview-footer-copy">© {year} {data.name}</p>
+      <p class="preview-footer-credit">
+        Designed by <a href="https://franzketechnologies.com" rel="noopener">Franzke Technologies</a>
+      </p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .preview-footer {
+    background: #0a0a0f;
+    color: #d1d5db;
+    padding: 48px 24px;
+  }
+
+  .preview-footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+
+  .preview-footer-business p {
+    margin: 0 0 4px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .preview-footer-name {
+    font-family: "Bebas Neue", "Poppins", sans-serif;
+    font-size: 1.35rem !important;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #ffffff;
+    margin-bottom: 8px !important;
+  }
+
+  .preview-footer-address,
+  .preview-footer-phone {
+    opacity: 0.75;
+  }
+
+  .preview-footer-meta {
+    text-align: right;
+  }
+
+  .preview-footer-copy {
+    margin: 0 0 4px;
+    font-size: 0.85rem;
+    opacity: 0.75;
+  }
+
+  .preview-footer-credit {
+    margin: 0;
+    font-size: 0.8rem;
+    opacity: 0.55;
+  }
+
+  .preview-footer-credit a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .preview-footer-credit a:hover {
+    border-bottom-color: rgba(255, 255, 255, 0.6);
+  }
+
+  @media (max-width: 520px) {
+    .preview-footer-meta {
+      text-align: left;
+    }
+  }
+</style>

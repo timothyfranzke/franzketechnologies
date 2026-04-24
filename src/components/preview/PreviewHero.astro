@@ -1,0 +1,129 @@
+---
+import type { ProspectSite } from "../../lib/preview/schema";
+import { paletteFor } from "../../lib/preview/palette";
+
+interface Props {
+  data: ProspectSite;
+}
+
+const { data } = Astro.props;
+const palette = paletteFor(data.vertical);
+const hasPhoto = !!data.heroPhoto;
+const gradient = `linear-gradient(135deg, ${palette.from} 0%, ${palette.via} 55%, ${palette.to} 100%)`;
+---
+
+<section class="preview-hero" style={`--hero-gradient: ${gradient};`}>
+  {hasPhoto && (
+    <div class="preview-hero-photo" style={`background-image: url('${data.heroPhoto}');`}></div>
+  )}
+  <div class="preview-hero-overlay" data-has-photo={hasPhoto ? "1" : "0"}></div>
+  <div class="preview-hero-inner">
+    <p class="preview-hero-eyebrow">{data.city}, {data.state}</p>
+    <h1 class="preview-hero-title">{data.name}</h1>
+    {data.tagline && <p class="preview-hero-tagline">{data.tagline}</p>}
+    <div class="preview-hero-actions">
+      {data.phone && (
+        <a class="preview-hero-cta" href={`tel:${data.phone.replace(/[^0-9+]/g, "")}`}>Call {data.phone}</a>
+      )}
+      <a class="preview-hero-link" href="#contact">Get in touch →</a>
+    </div>
+  </div>
+</section>
+
+<style>
+  .preview-hero {
+    position: relative;
+    min-height: 520px;
+    display: flex;
+    align-items: center;
+    color: #ffffff;
+    overflow: hidden;
+  }
+
+  .preview-hero-photo {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    filter: saturate(1.05);
+  }
+
+  .preview-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--hero-gradient);
+  }
+
+  .preview-hero-overlay[data-has-photo="1"] {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0.35) 60%, rgba(0, 0, 0, 0.7) 100%);
+  }
+
+  .preview-hero-inner {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 80px 24px;
+  }
+
+  .preview-hero-eyebrow {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin: 0 0 18px;
+    opacity: 0.9;
+  }
+
+  .preview-hero-title {
+    font-family: "Bebas Neue", "Poppins", sans-serif;
+    font-size: clamp(3rem, 9vw, 6.5rem);
+    line-height: 0.95;
+    letter-spacing: 0.01em;
+    margin: 0;
+    text-transform: uppercase;
+  }
+
+  .preview-hero-tagline {
+    margin: 28px 0 0;
+    font-size: clamp(1.05rem, 1.8vw, 1.3rem);
+    line-height: 1.5;
+    max-width: 640px;
+    opacity: 0.95;
+  }
+
+  .preview-hero-actions {
+    margin-top: 44px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px 28px;
+  }
+
+  .preview-hero-cta {
+    background: #ffffff;
+    color: #111827;
+    padding: 14px 26px;
+    font-weight: 600;
+    border-radius: 999px;
+    text-decoration: none;
+    font-size: 0.95rem;
+  }
+
+  .preview-hero-cta:hover {
+    background: #f5f5f5;
+  }
+
+  .preview-hero-link {
+    color: #ffffff;
+    text-decoration: none;
+    font-weight: 500;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+    padding-bottom: 2px;
+  }
+
+  .preview-hero-link:hover {
+    border-bottom-color: #ffffff;
+  }
+</style>

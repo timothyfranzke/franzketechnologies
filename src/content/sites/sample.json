@@ -1,0 +1,42 @@
+{
+  "guid": "sample",
+  "name": "Riverbend Bakery",
+  "city": "Topeka",
+  "state": "KS",
+  "category": "Bakery",
+  "vertical": "food-hospitality",
+  "rating": 4.8,
+  "reviewCount": 142,
+  "phone": "(785) 555-0147",
+  "address": "218 S Kansas Ave, Topeka, KS 66603",
+  "hours": {
+    "monday": "Closed",
+    "tuesday": "7:00 AM – 3:00 PM",
+    "wednesday": "7:00 AM – 3:00 PM",
+    "thursday": "7:00 AM – 3:00 PM",
+    "friday": "7:00 AM – 6:00 PM",
+    "saturday": "7:00 AM – 4:00 PM",
+    "sunday": "8:00 AM – 1:00 PM"
+  },
+  "services": [
+    "Sourdough loaves baked daily",
+    "Custom wedding & celebration cakes",
+    "Morning pastries and espresso",
+    "Wholesale to local cafés"
+  ],
+  "reviewQuotes": [
+    {
+      "text": "The cardamom buns are the best thing I have eaten in Topeka. Full stop.",
+      "author": "Megan L."
+    },
+    {
+      "text": "I ordered a last-minute birthday cake on a Thursday and they delivered something beautiful. Real people who care.",
+      "author": "David R."
+    },
+    {
+      "text": "I drive in from Lawrence every Saturday. That should tell you everything.",
+      "author": "Priya S."
+    }
+  ],
+  "tagline": "Small-batch bakery in downtown Topeka. Sourdough, pastries, and cakes worth the drive."
+}
