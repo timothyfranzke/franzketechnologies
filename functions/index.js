@@ -11,6 +11,10 @@ const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
 const RATE_LIMIT = 50; // emails per hour
 const RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
+function isLocalhost(origin) {
+  return /^https?:\/\/localhost(:\d+)?$/.test(origin);
+}
+
 /**
  * Look up a client by origin and validate their API key.
  * Returns the client doc data if valid, or null.
@@ -18,16 +22,18 @@ const RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 async function validateClient(origin, apiKey) {
   if (!origin || !apiKey) return null;
 
-  // Strip protocol to match stored domain
-  const domain = origin.replace(/^https?:\/\//, "").replace(/\/$/, "");
-
-  const snapshot = await db
+  let query = db
     .collection("clients")
-    .where("domain", "==", domain)
     .where("apiKey", "==", apiKey)
-    .where("active", "==", true)
-    .limit(1)
-    .get();
+    .where("active", "==", true);
+
+  // Localhost can match any client by API key alone
+  if (!isLocalhost(origin)) {
+    const domain = origin.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    query = query.where("domain", "==", domain);
+  }
+
+  const snapshot = await query.limit(1).get();
 
   if (snapshot.empty) return null;
 
@@ -83,7 +89,7 @@ export const sendEmail = onRequest(
         allowedOrigins.add(`http://${domain}`);
       });
 
-      if (allowedOrigins.has(origin)) {
+      if (allowedOrigins.has(origin) || isLocalhost(origin)) {
         res.set("Access-Control-Allow-Origin", origin);
         res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
         res.set("Access-Control-Allow-Headers", "Content-Type, x-api-key");
