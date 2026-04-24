@@ -1,6 +1,6 @@
 # Nightly Prospect Agent
 
-You are a scheduled remote agent running once per night to find one local business in the Midwest with strong reputation but weak web presence, mock up a homepage for them, and draft outreach — all committed to this repo so a GitHub Action deploys the preview page automatically.
+You are a scheduled remote agent running once per night to find one local business in the Midwest with strong reputation but weak web presence, mock up a homepage for them, and draft outreach — all committed to a nightly branch and opened as a pull request for Tim to review.
 
 The goal is lead generation by demonstration: the prospect clicks a link in their inbox or gets told about it on a phone call, sees a mocked homepage built specifically for their business, and has something concrete to react to.
 
@@ -27,11 +27,11 @@ The outreach voice is Tim's voice (from `CLAUDE.md`):
 5. `runs/{YYYY-MM-DD}.log` — run log (always, success or skip)
 6. Update `data/run-state.json` — increment rotationIndex, set lastRunAt
 
-Then `git add -A`, commit with message `prospect: {business name} — {city}`, `git push origin main`.
+Then create branch `prospect/{YYYY-MM-DD}-{guid}`, `git add -A`, commit with message `prospect: {business name} — {city}`, push the branch, and open a pull request against `main` (see step 12).
 
 **On no-qualifying-candidate night:**
 
-Only produce `runs/{YYYY-MM-DD}.log` (explaining what you tried) and update `data/run-state.json`. Commit as `prospect: no candidate on {date}`. Do not push empty pitches.
+Only produce `runs/{YYYY-MM-DD}.log` (explaining what you tried) and update `data/run-state.json`. Create branch `prospect/{YYYY-MM-DD}-no-candidate`, commit as `prospect: no candidate on {date}`, push the branch, and open a PR titled `prospect: no candidate on {date}` so the run log is still reviewable.
 
 ## Generate a guid
 
@@ -240,15 +240,32 @@ On a no-candidate night, record what was tried and why nothing qualified; skip t
 }
 ```
 
-### 12. Commit and push
+### 12. Branch, commit, push, open PR
 
 ```
+git checkout -b prospect/{YYYY-MM-DD}-{guid}
 git add -A
 git commit -m "prospect: Riverbend Bakery — Topeka"
-git push origin main
+git push -u origin prospect/{YYYY-MM-DD}-{guid}
+gh pr create \
+  --base main \
+  --head prospect/{YYYY-MM-DD}-{guid} \
+  --title "prospect: {Business Name} — {City}" \
+  --body "$(cat <<EOF
+Nightly prospect for {YYYY-MM-DD}.
+
+- **Business:** {Business Name} ({City}, {State})
+- **Rating:** {rating}★ · {reviewCount} reviews
+- **Preview (once merged):** https://franzketechnologies.com/sites/{guid}
+- **Outreach draft:** \`outreach/{guid}.md\`
+- **Run log:** \`runs/{YYYY-MM-DD}.log\`
+
+Review the outreach draft and the mock page before merging. Merge to \`main\` publishes the preview via Netlify.
+EOF
+)"
 ```
 
-Netlify is connected to this repo and watches `main`. On push, it runs `npm run build` and publishes `dist/`. Within a few minutes, `https://franzketechnologies.com/sites/{guid}` is live.
+Netlify is connected to this repo and watches `main` — the preview page goes live only after Tim merges the PR. Branch pushes get Netlify deploy previews automatically too, so Tim can eyeball the mock before merging.
 
 ## Failure handling
 
@@ -257,7 +274,7 @@ Netlify is connected to this repo and watches `main`. On push, it runs `npm run 
 | No candidate meets criteria in target city | Try next city in the rotation that night. If all 8 exhausted, log and exit cleanly — commit only the run log. |
 | Qualifying candidate has no email and no phone | Reject, add to ledger as rejected, try next. |
 | Hero photo scrape fails | Continue without `heroPhoto`; page uses typographic fallback. |
-| Git push fails (conflict, auth) | Save the run log locally under `runs/`, exit. Next night's run will retry with a fresh state. |
+| Git push or `gh pr create` fails (auth, conflict) | Commit locally to the branch, capture the error in the run log, exit non-zero. Next night's run starts from a fresh state. |
 | Any step errors unexpectedly | Capture the error in the run log, commit the log + any partial artifacts under a `runs/{date}-error.log`, exit non-zero. |
 
 ## Important constraints
