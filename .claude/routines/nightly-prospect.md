@@ -248,7 +248,7 @@ git commit -m "prospect: Riverbend Bakery — Topeka"
 git push origin main
 ```
 
-The existing GitHub Action handles the Astro build + Firebase deploy. Within a few minutes, `https://franzketechnologies.com/sites/{guid}` is live.
+Netlify is connected to this repo and watches `main`. On push, it runs `npm run build` and publishes `dist/`. Within a few minutes, `https://franzketechnologies.com/sites/{guid}` is live.
 
 ## Failure handling
 

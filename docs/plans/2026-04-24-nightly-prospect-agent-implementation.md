@@ -159,14 +159,13 @@ Commit: **"add nightly prospect agent briefing"**
 
 ## Phase 4 — Deploy pipeline check
 
-Look at `.github/workflows/` and confirm:
-- The build runs on push to `main`
-- It picks up changes under `src/content/sites/**` and `public/sites/**`
-- Firebase deploy step runs after build
+Netlify (not GitHub Actions / Firebase Hosting) watches `main` and auto-builds + deploys. No workflow file in repo — Netlify's build settings live in their UI. Confirmed:
 
-If path filters exclude the new directories, add them. Test by committing a throwaway update to `src/content/sites/sample.json` and watching the Action.
+- `npm run build` emits `dist/sites/{guid}/index.html` — verified with the sample prospect
+- `public/_redirects` is the only Netlify-specific file and doesn't affect prospect routes
+- No path filters to adjust; any push to `main` triggers a full rebuild
 
-Commit (if changes needed): **"ensure prospect content triggers deploy"**
+No code changes required for this phase.
 
 ## Phase 5 — First manual dry run
 

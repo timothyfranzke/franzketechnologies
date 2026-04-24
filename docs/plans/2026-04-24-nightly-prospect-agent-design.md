@@ -23,7 +23,7 @@ The goal is lead generation by demonstration: the prospect clicks a link and see
 | Preview framing | Franzke "preview ribbon" header on top of a mocked homepage |
 | Outreach delivery | Markdown file in repo (`outreach/{guid}.md`) |
 | Contact channel | Email preferred, phone as fallback |
-| Deploy path | Agent commits + pushes; existing GitHub Action deploys to Firebase |
+| Deploy path | Agent commits + pushes; Netlify (watching `main`) auto-builds and deploys |
 
 ## High-Level Flow
 
@@ -34,7 +34,7 @@ The routine runs at 02:00 Central nightly and produces four artifacts per succes
 3. **Outreach file** — `outreach/{guid}.md` (your copy-paste email)
 4. **Ledger update** — `data/sites-pitched.json` appends the pitch record
 
-Agent commits, pushes to `main`, GitHub Action deploys. No further human intervention needed for the preview to go live.
+Agent commits, pushes to `main`, Netlify auto-deploys. No further human intervention needed for the preview to go live.
 
 ## Nightly Agent Workflow
 
@@ -158,7 +158,7 @@ Checked before every commit. Dedup key is normalized `name + city`.
 | Candidate qualifies but no email or phone | Reject, keep searching |
 | Hero scrape fails | Fall back to typographic gradient; don't abort |
 | Git push fails (conflict, auth) | Write local run log; next night's agent retries |
-| GitHub Action deploy fails | Action's own alerts handle it |
+| Netlify build fails | Netlify's own alerts handle it (email on failed deploy) |
 
 ### Run logs
 `runs/{YYYY-MM-DD}.log` is committed every night regardless of outcome. Audit trail of what was searched, what was rejected, what shipped — and the dataset to tune thresholds if nights keep ending in "no candidate found."
