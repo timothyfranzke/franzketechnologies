@@ -1,6 +1,30 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import filter from "leo-profanity";
 import {
+  createGameState,
+  startGame,
+  spawnTile,
+  selectTile,
+  handleMissedTile,
+  cleanupTiles,
+  tick,
+  unlockSelection,
+  getDifficultyParams,
+  getComboMultiplier,
+  _testing as engineTesting,
+} from "../lib/lightningMatchEngine.js";
+import { createRenderer, resolveColors } from "../lib/lightningMatchRenderer.js";
+import {
+  createGameState as createSimonState,
+  startRound,
+  advanceWatch,
+  generateOptions,
+  submitAnswer,
+  nextRound,
+  getRating as getSimonRating,
+  _testing as simonTesting,
+} from "../lib/simonStatesEngine.js";
+import {
   collection,
   addDoc,
   getDocs,
@@ -18,11 +42,11 @@ const NICKNAMES_KEY = "nifty-fifty-nicknames";
 
 // ─── NEW GAME PROMO ────────────────────────────────────────────────────
 const NEWEST_GAME = {
-  id: "reveal",
-  title: "Letter by Letter",
-  desc: "Blanks fill in over time. Type the answer before all the letters are revealed!",
-  icon: "❧",
-  releaseDate: "2026-04-20",
+  id: "simon",
+  title: "Simon States",
+  desc: "Memory chain game! Watch the sequence, then recall each capital in order.",
+  icon: "◎",
+  releaseDate: "2026-04-29",
   newBadgeDays: 2,
 };
 const NEW_GAME_SEEN_KEY = `nifty-fifty-new-game-seen-${NEWEST_GAME.id}`;
@@ -113,6 +137,72 @@ const revealLeaderboard = {
   async getRank(score, category) {
     const q = query(
       collection(db, "reveal-scores"),
+      where("category", "==", category),
+      where("score", ">", score)
+    );
+    const snap = await getDocs(q);
+    return snap.size + 1;
+  },
+};
+
+const lightningLeaderboard = {
+  async submit(name, score, category) {
+    await addDoc(collection(db, "lightning-scores"), {
+      name,
+      score,
+      category,
+      timestamp: serverTimestamp(),
+    });
+  },
+  async getTop(category, max = 20, afterDoc = null) {
+    const constraints = [
+      collection(db, "lightning-scores"),
+      where("category", "==", category),
+      orderBy("score", "desc"),
+      orderBy("timestamp", "asc"),
+    ];
+    if (afterDoc) constraints.push(startAfter(afterDoc));
+    constraints.push(limit(max));
+    const q = query(...constraints);
+    const snap = await getDocs(q);
+    return { entries: snap.docs.map((d) => ({ id: d.id, ...d.data() })), lastDoc: snap.docs[snap.docs.length - 1] || null };
+  },
+  async getRank(score, category) {
+    const q = query(
+      collection(db, "lightning-scores"),
+      where("category", "==", category),
+      where("score", ">", score)
+    );
+    const snap = await getDocs(q);
+    return snap.size + 1;
+  },
+};
+
+const simonLeaderboard = {
+  async submit(name, score, category) {
+    await addDoc(collection(db, "simon-scores"), {
+      name,
+      score,
+      category,
+      timestamp: serverTimestamp(),
+    });
+  },
+  async getTop(category, max = 20, afterDoc = null) {
+    const constraints = [
+      collection(db, "simon-scores"),
+      where("category", "==", category),
+      orderBy("score", "desc"),
+      orderBy("timestamp", "asc"),
+    ];
+    if (afterDoc) constraints.push(startAfter(afterDoc));
+    constraints.push(limit(max));
+    const q = query(...constraints);
+    const snap = await getDocs(q);
+    return { entries: snap.docs.map((d) => ({ id: d.id, ...d.data() })), lastDoc: snap.docs[snap.docs.length - 1] || null };
+  },
+  async getRank(score, category) {
+    const q = query(
+      collection(db, "simon-scores"),
       where("category", "==", category),
       where("score", ">", score)
     );
@@ -416,6 +506,8 @@ const GlobalStyles = () => (
       to { opacity: 1; transform: translateX(0) scale(1); }
     }
 
+
+
     .paper-texture {
       background-color: var(--cream);
       background-image:
@@ -522,6 +614,20 @@ const Home = ({ onPick, stats, category, setCategory, direction, setDirection })
       icon: "❧",
       color: "var(--sage)",
     },
+    {
+      id: "simon",
+      title: "Simon States",
+      desc: "Memory chain. Each round adds a state. How far can you go?",
+      icon: "◎",
+      color: "var(--deep)",
+    },
+    // {
+    //   id: "lightning",
+    //   title: "Lightning Match",
+    //   desc: "Match falling word pairs before time runs out!",
+    //   icon: "↯",
+    //   color: "var(--rust)",
+    // },
   ];
   const studyModes = [
     {
@@ -4020,6 +4126,1383 @@ const Reveal = ({ onExit, recordResult, category, direction: dir, onViewLeaderbo
   );
 };
 
+// ─── LIGHTNING MATCH ────────────────────────────────────────────────────
+
+const LightningMatch = ({ onExit, category, onViewLeaderboard }) => {
+  const [gamePhase, setGamePhase] = useState("countdown"); // countdown | playing | gameOver
+  const [countdown, setCountdown] = useState("Ready?");
+  const [hudState, setHudState] = useState({ score: 0, timeRemaining: 60, combo: 0 });
+  const [finalState, setFinalState] = useState(null);
+
+  const gameStateRef = useRef(createGameState());
+  const canvasRef = useRef(null);
+  const rendererRef = useRef(null);
+
+  // Sync HUD from ref (called on meaningful events, not every frame)
+  const syncHud = useCallback(() => {
+    const s = gameStateRef.current;
+    setHudState({ score: s.score, timeRemaining: s.timeRemaining, combo: s.combo });
+  }, []);
+
+  // Countdown sequence
+  useEffect(() => {
+    if (countdown === null) return;
+    const steps = { "Ready?": "3", "3": "2", "2": "1", "1": "GO!", "GO!": null };
+    const delay = countdown === "Ready?" ? 1000 : countdown === "GO!" ? 600 : 800;
+    const t = setTimeout(() => {
+      const next = steps[countdown];
+      setCountdown(next);
+      if (next === null) {
+        gameStateRef.current = startGame(gameStateRef.current);
+        setGamePhase("playing");
+      }
+    }, delay);
+    return () => clearTimeout(t);
+  }, [countdown]);
+
+  // Canvas renderer lifecycle
+  useEffect(() => {
+    if (gamePhase !== "playing") return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const colors = resolveColors(document.documentElement);
+    const fonts = {
+      display: getComputedStyle(document.documentElement).getPropertyValue("font-family").trim() || "system-ui",
+      mono: "ui-monospace, SFMono-Regular, Menlo, monospace",
+    };
+
+    const renderer = createRenderer(canvas, {
+      getGameState: () => gameStateRef.current,
+
+      onTileClick: (tileId) => {
+        const s = gameStateRef.current;
+        const { state: newState, result, awarded, multiplier } = selectTile(s, tileId);
+        gameStateRef.current = newState;
+
+        if (result === "correct") {
+          // Find the matched tiles for effect positions
+          const tile = s.activeTiles.find((t) => t.id === tileId);
+          const [id1, id2] = s.selectedTileIds.length === 1 ? [s.selectedTileIds[0], tileId] : [tileId];
+          const matchedTiles = newState.activeTiles.filter((t) => t.state === "matched");
+
+          // Add match pop effects for both matched tiles
+          for (const mt of matchedTiles) {
+            const spawnTime = renderer.getTileBounds().find((b) => b.id === mt.id);
+            renderer.addEffect({
+              type: "matchPop",
+              text: mt.text,
+              x: mt.x,
+              y: spawnTime ? spawnTime.y : canvas.getBoundingClientRect().height * 0.4,
+            });
+          }
+
+          // Add floating score text
+          if (tile) {
+            const tileBound = renderer.getTileBounds().find((b) => b.id === tileId);
+            renderer.addEffect({
+              type: "floatScore",
+              text: `+${awarded}`,
+              multiplier: multiplier > 1 ? `x${multiplier}` : null,
+              x: tile.x,
+              y: tileBound ? tileBound.y : canvas.getBoundingClientRect().height * 0.4,
+            });
+          }
+
+          syncHud();
+
+          // Delayed cleanup + unlock
+          setTimeout(() => {
+            gameStateRef.current = cleanupTiles(unlockSelection(gameStateRef.current));
+          }, Math.max(engineTesting.SELECTION_LOCK_MS, 500));
+        } else if (result === "incorrect") {
+          setTimeout(() => {
+            gameStateRef.current = unlockSelection(gameStateRef.current);
+          }, engineTesting.SELECTION_LOCK_MS);
+        }
+      },
+
+      onTileMiss: (tileId) => {
+        const s = gameStateRef.current;
+        const tile = s.activeTiles.find((t) => t.id === tileId);
+        if (!tile || tile.state === "matched") return;
+        gameStateRef.current = cleanupTiles(handleMissedTile(s, tileId));
+        renderer.addEffect({ type: "missFlash" });
+      },
+
+      onSpawnNeeded: () => {
+        const { state: newState } = spawnTile(gameStateRef.current, STATES, category);
+        gameStateRef.current = newState;
+      },
+
+      onTimerTick: () => {
+        let s = tick(gameStateRef.current, 1);
+        s = cleanupTiles(s);
+        gameStateRef.current = s;
+        syncHud();
+
+        if (s.status === "gameOver") {
+          ga("lightning_complete", { score: s.score, category });
+        }
+      },
+
+      onGameOver: () => {
+        const s = gameStateRef.current;
+        setFinalState({ ...s });
+        setGamePhase("gameOver");
+        syncHud();
+      },
+
+      colors,
+      fonts,
+    });
+
+    rendererRef.current = renderer;
+    renderer.start();
+
+    // Handle resize
+    const ro = new ResizeObserver(() => renderer.resize());
+    ro.observe(canvas);
+
+    return () => {
+      renderer.stop();
+      ro.disconnect();
+      rendererRef.current = null;
+    };
+  }, [gamePhase, category, syncHud]);
+
+  const handleRestart = () => {
+    if (rendererRef.current) rendererRef.current.stop();
+    gameStateRef.current = createGameState();
+    setHudState({ score: 0, timeRemaining: 60, combo: 0 });
+    setFinalState(null);
+    setCountdown("Ready?");
+    setGamePhase("countdown");
+    setPosted(false);
+    setRank(null);
+    setShowNickInput(false);
+    setShowNamePicker(false);
+  };
+
+  // Leaderboard submission state
+  const [posted, setPosted] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [rank, setRank] = useState(null);
+  const [nickInput, setNickInput] = useState("");
+  const [showNickInput, setShowNickInput] = useState(false);
+  const [profanityError, setProfanityError] = useState(false);
+  const [showNamePicker, setShowNamePicker] = useState(false);
+
+  const handlePost = async (name) => {
+    if (posting || posted) return;
+    if (filter.check(name)) {
+      setProfanityError(true);
+      setShowNickInput(true);
+      setNickInput(name);
+      return;
+    }
+    setProfanityError(false);
+    setPosting(true);
+    try {
+      leaderboard.setNickname(name);
+      const score = finalState ? finalState.score : 0;
+      await lightningLeaderboard.submit(name, score, category);
+      const r = await lightningLeaderboard.getRank(score, category);
+      setRank(r);
+      setPosted(true);
+      ga("lightning_leaderboard_submit", { score, category, rank: r });
+    } catch (e) {
+      console.error("Lightning leaderboard submit failed:", e);
+    }
+    setPosting(false);
+  };
+
+  const savedNames = leaderboard.getAllNicknames().filter((n) => !filter.check(n));
+
+  const startPost = () => {
+    if (savedNames.length > 0) {
+      setShowNamePicker(true);
+    } else {
+      setShowNickInput(true);
+      setNickInput("");
+    }
+  };
+
+  // ─── GAME OVER SCREEN ─────────────────────────────────────────────
+
+  if (gamePhase === "gameOver" && finalState) {
+    const catLabel = category === "abbreviations" ? "Abbreviations" : "Capitals";
+    const { score, matchesCorrect, matchesIncorrect, missedTiles: missed, maxCombo } = finalState;
+    const rating =
+      score >= 3000 ? "★ LEGENDARY ★" :
+      score >= 2000 ? "★ EXTRAORDINARY ★" :
+      score >= 1000 ? "★ SHARP ★" :
+      score >= 500 ? "★ SOLID ★" :
+      "★ KEEP GOING ★";
+
+    return (
+      <div className="fade-in text-center py-8">
+        <div
+          className="font-mono text-[10px] uppercase tracking-[0.3em] mb-3"
+          style={{ color: "var(--dusty)" }}
+        >
+          Time's Up
+        </div>
+        <div
+          className="font-display font-black leading-none mb-2"
+          style={{ fontSize: "clamp(5rem, 25vw, 9rem)", color: "var(--rust)" }}
+        >
+          {score}
+        </div>
+        <div
+          className="font-display italic text-xl mb-4"
+          style={{ color: "var(--ink)" }}
+        >
+          {catLabel} in 60 seconds
+        </div>
+        <div
+          className="inline-block px-4 py-2 stamp font-mono text-xs"
+          style={{ marginBottom: "1.5rem" }}
+        >
+          {rating}
+        </div>
+
+        {/* Stats strip */}
+        <div className="flex justify-center gap-4 mb-6">
+          <Stat label="Correct" value={matchesCorrect} tone="sage" />
+          <Stat label="Wrong" value={matchesIncorrect} tone="rust" />
+          <Stat label="Missed" value={missed} tone="dusty" />
+          <Stat label="Max Combo" value={maxCombo} tone="gold" />
+        </div>
+
+        {/* Leaderboard submit */}
+        {score > 0 && (
+          <div className="mb-6">
+            {posted ? (
+              <div className="fade-in">
+                <div
+                  className="rounded-2xl p-4 mb-2"
+                  style={{ background: "rgba(107,142,111,0.12)", border: "2px solid var(--sage)" }}
+                >
+                  <div
+                    className="font-mono text-xs uppercase tracking-widest"
+                    style={{ color: "var(--sage)" }}
+                  >
+                    ✓ Posted to Leaderboard
+                  </div>
+                  {rank && (
+                    <div
+                      className="font-display font-bold text-lg mt-1"
+                      style={{ color: "var(--ink)" }}
+                    >
+                      You're #{rank} on {catLabel}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={onViewLeaderboard}
+                  className="w-full rounded-xl py-2.5 font-mono text-xs uppercase tracking-widest transition hover:opacity-70"
+                  style={{ color: "var(--ink)", border: "2px solid rgba(26,37,55,0.15)" }}
+                >
+                  View Leaderboard
+                </button>
+              </div>
+            ) : showNamePicker && savedNames.length > 0 ? (
+              <div className="fade-in">
+                <div
+                  className="rounded-2xl p-4"
+                  style={{ background: "var(--paper)", border: "2px solid var(--ink)" }}
+                >
+                  <div
+                    className="font-mono text-[10px] uppercase tracking-widest mb-3"
+                    style={{ color: "var(--dusty)" }}
+                  >
+                    Who's Playing?
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {savedNames.map((name) => (
+                      <button
+                        key={name}
+                        onClick={() => handlePost(name)}
+                        disabled={posting}
+                        className="rounded-xl px-4 py-2 font-display font-bold text-sm transition active:scale-[0.96]"
+                        style={{
+                          background: "var(--gold)",
+                          color: "var(--ink)",
+                          border: "2px solid var(--ink)",
+                          boxShadow: "2px 2px 0 var(--ink)",
+                        }}
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => { setShowNamePicker(false); setShowNickInput(true); setNickInput(""); }}
+                    className="font-mono text-[10px] uppercase tracking-widest transition hover:opacity-70"
+                    style={{ color: "var(--dusty)" }}
+                  >
+                    Someone else? →
+                  </button>
+                </div>
+              </div>
+            ) : showNickInput ? (
+              <div className="fade-in">
+                <div
+                  className="rounded-2xl p-4"
+                  style={{ background: "var(--paper)", border: "2px solid var(--ink)" }}
+                >
+                  <div
+                    className="font-mono text-[10px] uppercase tracking-widest mb-3"
+                    style={{ color: "var(--dusty)" }}
+                  >
+                    Choose a Nickname
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={nickInput}
+                      onChange={(e) => { setNickInput(e.target.value.slice(0, 15)); setProfanityError(false); }}
+                      placeholder="Your name..."
+                      autoFocus
+                      className="flex-1 rounded-xl px-3 py-2 font-body text-sm outline-none"
+                      style={{
+                        background: "rgba(26,37,55,0.06)",
+                        color: "var(--ink)",
+                        border: "2px solid rgba(26,37,55,0.15)",
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && nickInput.trim().length >= 3)
+                          handlePost(nickInput.trim());
+                      }}
+                    />
+                    <button
+                      onClick={() => handlePost(nickInput.trim())}
+                      disabled={nickInput.trim().length < 3 || posting}
+                      className="rounded-xl px-4 py-2 font-mono text-xs uppercase tracking-widest font-bold transition"
+                      style={{
+                        background: nickInput.trim().length >= 3 ? "var(--ink)" : "rgba(26,37,55,0.1)",
+                        color: nickInput.trim().length >= 3 ? "var(--cream)" : "var(--dusty)",
+                      }}
+                    >
+                      {posting ? "..." : "Post"}
+                    </button>
+                  </div>
+                  {profanityError ? (
+                    <div className="font-mono text-[10px] mt-1" style={{ color: "var(--rust)" }}>
+                      Please choose an appropriate nickname
+                    </div>
+                  ) : (
+                    <div className="font-mono text-[10px] mt-1" style={{ color: "var(--dusty)" }}>
+                      3-15 characters
+                    </div>
+                  )}
+                  {savedNames.length > 0 && (
+                    <button
+                      onClick={() => { setShowNickInput(false); setShowNamePicker(true); }}
+                      className="font-mono text-[10px] uppercase tracking-widest mt-2 transition hover:opacity-70"
+                      style={{ color: "var(--dusty)" }}
+                    >
+                      ← Back to names
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={startPost}
+                disabled={posting}
+                className="w-full rounded-2xl p-4 font-display font-bold text-lg transition active:scale-[0.98]"
+                style={{
+                  background: "var(--gold)",
+                  color: "var(--ink)",
+                  border: "2px solid var(--ink)",
+                  boxShadow: "3px 3px 0 var(--ink)",
+                }}
+              >
+                {posting ? "Posting..." : "Post to Leaderboard"}
+              </button>
+            )}
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <button
+            onClick={handleRestart}
+            className="w-full rounded-2xl p-4 font-display font-bold text-lg"
+            style={{
+              background: "var(--rust)",
+              color: "var(--cream)",
+              border: "2px solid var(--ink)",
+              boxShadow: "3px 3px 0 var(--ink)",
+            }}
+          >
+            Run It Back
+          </button>
+          <button
+            onClick={() => onExit(null)}
+            className="w-full rounded-2xl p-4 font-mono text-xs uppercase tracking-widest"
+            style={{
+              background: "transparent",
+              color: "var(--ink)",
+              border: "2px solid var(--ink)",
+            }}
+          >
+            Back to Menu
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── COUNTDOWN ────────────────────────────────────────────────────
+
+  if (countdown !== null) {
+    const boxStyles = {
+      "Ready?": { rotate: "-2deg", borderColor: "var(--ink)", background: "var(--cream)" },
+      "3": { rotate: "3deg", borderColor: "var(--ink)", background: "var(--paper)" },
+      "2": { rotate: "-4deg", borderColor: "var(--rust)", background: "var(--cream)" },
+      "1": { rotate: "2.5deg", borderColor: "var(--gold)", background: "var(--paper)" },
+      "GO!": { rotate: "-3deg", borderColor: "var(--rust)", background: "rgba(196,78,71,0.08)" },
+    };
+    const bs = boxStyles[countdown];
+    return (
+      <div className="fade-in" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
+        <div
+          key={countdown}
+          style={{
+            border: `3px solid ${bs.borderColor}`,
+            background: bs.background,
+            boxShadow: "4px 4px 0 var(--ink)",
+            borderRadius: "1rem",
+            padding: countdown === "Ready?" ? "1.5rem 2.5rem" : "1rem 2.5rem",
+            transform: `rotate(${bs.rotate})`,
+            animation: "countdownPop 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+          }}
+        >
+          <div
+            className="font-display font-black text-center"
+            style={{
+              fontSize: countdown === "Ready?" ? "clamp(2.5rem, 12vw, 4.5rem)" : countdown === "GO!" ? "clamp(4rem, 20vw, 8rem)" : "clamp(5rem, 25vw, 10rem)",
+              color: countdown === "GO!" ? "var(--rust)" : "var(--ink)",
+              fontVariationSettings: '"SOFT" 100, "WONK" 1',
+              fontStyle: countdown === "GO!" ? "italic" : "normal",
+              lineHeight: 1,
+            }}
+          >
+            {countdown}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── PLAYING ──────────────────────────────────────────────────────
+
+  const timerPct = (hudState.timeRemaining / 60) * 100;
+  const comboMult = getComboMultiplier(hudState.combo);
+
+  return (
+    <div className="fade-in" style={{ userSelect: "none" }}>
+      {/* HUD */}
+      <div className="flex items-center justify-between mb-3">
+        <BackBtn onClick={() => { if (rendererRef.current) rendererRef.current.stop(); onExit(null); }} />
+        <div className="flex gap-2 items-center">
+          {hudState.combo > 0 && (
+            <div
+              className="font-mono text-xs px-2.5 py-1.5 rounded-full font-bold pop"
+              style={{
+                background: comboMult >= 3 ? "var(--gold)" : comboMult >= 2 ? "var(--sage)" : "rgba(26,37,55,0.08)",
+                color: comboMult >= 2 ? "var(--cream)" : "var(--ink)",
+              }}
+            >
+              x{comboMult}
+            </div>
+          )}
+          <div
+            className="font-mono text-sm px-3 py-1.5 rounded-full font-bold"
+            style={{
+              background: hudState.timeRemaining <= 10 ? "var(--rust)" : "var(--ink)",
+              color: "var(--cream)",
+            }}
+          >
+            {hudState.timeRemaining}s
+          </div>
+          <div
+            className="font-mono text-sm px-3 py-1.5 rounded-full font-bold"
+            style={{ background: "var(--gold)", color: "var(--ink)" }}
+          >
+            {hudState.score}
+          </div>
+        </div>
+      </div>
+
+      {/* Timer bar */}
+      <div
+        className="h-2 rounded-full mb-4 overflow-hidden"
+        style={{ background: "rgba(26,37,55,0.08)" }}
+      >
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${timerPct}%`,
+            background: hudState.timeRemaining <= 10 ? "var(--rust)" : "var(--ink)",
+            transition: "width 1s linear, background 0.3s",
+          }}
+        />
+      </div>
+
+      {/* Canvas play area */}
+      <div
+        style={{
+          position: "relative",
+          height: "calc(100vh - 200px)",
+          minHeight: "400px",
+          overflow: "hidden",
+          borderRadius: "1rem",
+          border: "2px solid rgba(26,37,55,0.08)",
+        }}
+      >
+        <canvas
+          ref={canvasRef}
+          style={{ width: "100%", height: "100%", touchAction: "none", display: "block" }}
+        />
+      </div>
+    </div>
+  );
+};
+
+// ─── SIMON STATES ────────────────────────────────────────────────────────
+const SIMON_INSTRUCTIONS_KEY = "nifty-fifty-simon-instructions-dismissed";
+
+const SimonStates = ({ onExit, category, onViewLeaderboard }) => {
+  const [showInstructions, setShowInstructions] = useState(() => {
+    try { return !localStorage.getItem(SIMON_INSTRUCTIONS_KEY); }
+    catch { return true; }
+  });
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+  const [gamePhase, setGamePhase] = useState("countdown"); // countdown | playing | gameOver
+  const [countdown, setCountdown] = useState(null);
+  const [gameState, setGameState] = useState(() => createSimonState(category));
+  const [options, setOptions] = useState([]);
+  const [flash, setFlash] = useState(null); // null | "correct" | "wrong"
+  const [watchVisible, setWatchVisible] = useState(false);
+  const [showYourTurn, setShowYourTurn] = useState(false);
+  const [showRoundComplete, setShowRoundComplete] = useState(false);
+  const [answerLocked, setAnswerLocked] = useState(false);
+
+  // Leaderboard submission state
+  const [posted, setPosted] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [rank, setRank] = useState(null);
+  const [nickInput, setNickInput] = useState("");
+  const [showNickInput, setShowNickInput] = useState(false);
+  const [profanityError, setProfanityError] = useState(false);
+  const [showNamePicker, setShowNamePicker] = useState(false);
+
+  // watchStep drives the watch animation via useEffect.
+  // -1 = inactive. Even steps (0,2,4..) = show state[step/2]. Odd steps = gap.
+  // When step === 2 * sequence.length → done watching.
+  const [watchStep, setWatchStep] = useState(-1);
+
+  const gameStateRef = useRef(gameState);
+  gameStateRef.current = gameState;
+
+  // Countdown sequence
+  useEffect(() => {
+    if (countdown === null) return;
+    const steps = { "Ready?": "3", "3": "2", "2": "1", "1": "GO!", "GO!": null };
+    const delay = countdown === "Ready?" ? 1000 : countdown === "GO!" ? 600 : 800;
+    const t = setTimeout(() => {
+      const next = steps[countdown];
+      setCountdown(next);
+      if (next === null) {
+        // Start round 1
+        const s = startRound(gameStateRef.current, STATES);
+        setGameState(s);
+        setGamePhase("playing");
+        setWatchStep(0);
+      }
+    }, delay);
+    return () => clearTimeout(t);
+  }, [countdown]);
+
+  // Watch sequence animation — driven entirely by watchStep state
+  useEffect(() => {
+    if (watchStep < 0) return;
+    const gs = gameStateRef.current;
+    const seqLen = gs.sequence.length;
+
+    // Done watching → show "Your Turn!", then transition to recalling
+    if (watchStep >= seqLen * 2) {
+      setWatchVisible(false);
+      setShowYourTurn(true);
+      const t = setTimeout(() => {
+        setShowYourTurn(false);
+        setWatchStep(-1);
+        const recallState = { ...gameStateRef.current, phase: "recalling", currentIndex: 0 };
+        setGameState(recallState);
+        setOptions(generateOptions(recallState, STATES));
+      }, 1000);
+      return () => clearTimeout(t);
+    }
+
+    const isShow = watchStep % 2 === 0;
+    const stateIdx = Math.floor(watchStep / 2);
+
+    if (isShow) {
+      // Show this state
+      setGameState((prev) => ({ ...prev, currentIndex: stateIdx }));
+      setWatchVisible(true);
+      const isLast = stateIdx === seqLen - 1;
+      const t = setTimeout(() => {
+        setWatchVisible(false);
+        // Skip the gap after the last state
+        setWatchStep((prev) => prev + (isLast ? 2 : 1));
+      }, simonTesting.FLASH_DURATION_MS);
+      return () => clearTimeout(t);
+    } else {
+      // Gap between states
+      const t = setTimeout(() => {
+        setWatchStep((prev) => prev + 1);
+      }, simonTesting.FLASH_GAP_MS);
+      return () => clearTimeout(t);
+    }
+  }, [watchStep]);
+
+  const handleAnswer = (answer) => {
+    if (answerLocked || gameState.status === "gameOver") return;
+    setAnswerLocked(true);
+
+    const { state: newState, correct } = submitAnswer(gameState, answer);
+
+    if (correct) {
+      setFlash("correct");
+      setTimeout(() => {
+        setFlash(null);
+        setAnswerLocked(false);
+
+        if (newState.phase === "roundComplete") {
+          setGameState(newState);
+          // Show round complete celebration
+          setShowRoundComplete(true);
+          setTimeout(() => {
+            setShowRoundComplete(false);
+            // Start next round
+            const prepped = nextRound(newState);
+            const nxt = startRound(prepped, STATES);
+            if (nxt.status === "gameOver") {
+              // All 50 states completed — victory!
+              setGameState(nxt);
+              setGamePhase("gameOver");
+              ga("simon_complete", { round: nxt.highestRound, category });
+            } else {
+              setGameState(nxt);
+              setWatchStep(0); // kick off watch via useEffect
+            }
+          }, 1500);
+        } else {
+          // More items to recall — advance and generate new options
+          setGameState(newState);
+          setOptions(generateOptions(newState, STATES));
+        }
+      }, 500);
+    } else {
+      setFlash("wrong");
+      setTimeout(() => {
+        setFlash(null);
+        setGameState(newState);
+        setGamePhase("gameOver");
+        ga("simon_complete", { round: newState.highestRound, category });
+      }, 800);
+    }
+  };
+
+  const handleRestart = () => {
+    setWatchStep(-1);
+    const fresh = createSimonState(category);
+    setGameState(fresh);
+    setOptions([]);
+    setFlash(null);
+    setWatchVisible(false);
+    setShowYourTurn(false);
+    setShowRoundComplete(false);
+    setAnswerLocked(false);
+    setCountdown("Ready?");
+    setGamePhase("countdown");
+    setPosted(false);
+    setRank(null);
+    setShowNickInput(false);
+    setShowNamePicker(false);
+  };
+
+  const handlePost = async (name) => {
+    if (posting || posted) return;
+    if (filter.check(name)) {
+      setProfanityError(true);
+      setShowNickInput(true);
+      setNickInput(name);
+      return;
+    }
+    setProfanityError(false);
+    setPosting(true);
+    try {
+      leaderboard.setNickname(name);
+      const score = gameState.highestRound;
+      await simonLeaderboard.submit(name, score, category);
+      setPosted(true);
+      try {
+        const r = await simonLeaderboard.getRank(score, category);
+        setRank(r);
+        ga("simon_leaderboard_submit", { score, category, rank: r });
+      } catch (rankErr) {
+        console.warn("Could not fetch rank (index may need creating):", rankErr);
+        ga("simon_leaderboard_submit", { score, category, rank: null });
+      }
+    } catch (e) {
+      console.error("Simon leaderboard submit failed:", e);
+    }
+    setPosting(false);
+  };
+
+  const savedNames = leaderboard.getAllNicknames().filter((n) => !filter.check(n));
+
+  const startPost = () => {
+    if (savedNames.length > 0) {
+      setShowNamePicker(true);
+    } else {
+      setShowNickInput(true);
+      setNickInput("");
+    }
+  };
+
+  const dismissInstructions = () => {
+    if (dontShowAgain) {
+      try { localStorage.setItem(SIMON_INSTRUCTIONS_KEY, "1"); } catch {}
+    }
+    setShowInstructions(false);
+    setCountdown("Ready?");
+  };
+
+  // ─── INSTRUCTIONS MODAL ──────────────────────────────────────────
+
+  if (showInstructions) {
+    const catLabel = category === "abbreviations" ? "abbreviation" : "capital";
+    return (
+      <div className="fade-in text-center py-8">
+        <div
+          className="rounded-2xl p-6 text-left"
+          style={{
+            background: "var(--cream)",
+            border: "3px solid var(--ink)",
+            boxShadow: "6px 6px 0 var(--ink)",
+            transform: "rotate(-0.5deg)",
+          }}
+        >
+          <div className="text-center mb-4">
+            <div className="font-display text-4xl mb-2">◎</div>
+            <h2
+              className="font-display font-black text-2xl"
+              style={{ color: "var(--ink)", fontVariationSettings: '"SOFT" 100, "WONK" 1' }}
+            >
+              Simon States
+            </h2>
+          </div>
+
+          <div className="space-y-3 mb-6">
+            <div className="flex gap-3 items-start">
+              <div
+                className="font-mono text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5"
+                style={{ background: "var(--ink)", color: "var(--cream)" }}
+              >
+                1
+              </div>
+              <p className="font-body text-sm" style={{ color: "var(--ink)" }}>
+                <strong>Watch</strong> — States flash on screen one at a time. Pay attention to the order!
+              </p>
+            </div>
+            <div className="flex gap-3 items-start">
+              <div
+                className="font-mono text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5"
+                style={{ background: "var(--ink)", color: "var(--cream)" }}
+              >
+                2
+              </div>
+              <p className="font-body text-sm" style={{ color: "var(--ink)" }}>
+                <strong>Recall</strong> — For each state in order, pick the correct {catLabel} from 4 choices. You won't see the state name — you have to remember it!
+              </p>
+            </div>
+            <div className="flex gap-3 items-start">
+              <div
+                className="font-mono text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5"
+                style={{ background: "var(--ink)", color: "var(--cream)" }}
+              >
+                3
+              </div>
+              <p className="font-body text-sm" style={{ color: "var(--ink)" }}>
+                <strong>Chain</strong> — Each round adds one more state to the sequence. One wrong answer and it's game over.
+              </p>
+            </div>
+          </div>
+
+          <label
+            className="flex items-center gap-2 mb-5 cursor-pointer"
+            style={{ color: "var(--dusty)" }}
+          >
+            <input
+              type="checkbox"
+              checked={dontShowAgain}
+              onChange={(e) => setDontShowAgain(e.target.checked)}
+              className="rounded"
+              style={{ accentColor: "var(--ink)" }}
+            />
+            <span className="font-mono text-[10px] uppercase tracking-widest">
+              Don't show again
+            </span>
+          </label>
+
+          <button
+            onClick={dismissInstructions}
+            className="w-full rounded-2xl p-4 font-display font-bold text-lg transition active:scale-[0.98]"
+            style={{
+              background: "var(--sage)",
+              color: "var(--cream)",
+              border: "2px solid var(--ink)",
+              boxShadow: "3px 3px 0 var(--ink)",
+            }}
+          >
+            Got It — Let's Go!
+          </button>
+          <button
+            onClick={() => onExit(null)}
+            className="w-full mt-2 rounded-2xl p-2.5 font-mono text-xs uppercase tracking-widest"
+            style={{
+              background: "transparent",
+              color: "var(--ink)",
+              border: "2px solid rgba(26,37,55,0.15)",
+            }}
+          >
+            Back to Menu
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── GAME OVER SCREEN ─────────────────────────────────────────────
+
+  if (gamePhase === "gameOver") {
+    const catLabel = category === "abbreviations" ? "Abbreviations" : "Capitals";
+    const score = gameState.highestRound;
+    const rating = getSimonRating(score);
+    const failed = gameState.failedItem;
+
+    return (
+      <div className="fade-in text-center py-8">
+        <div
+          className="font-mono text-[10px] uppercase tracking-[0.3em] mb-3"
+          style={{ color: "var(--dusty)" }}
+        >
+          {failed ? "Game Over" : "Perfect Game!"}
+        </div>
+        <div
+          className="font-display font-black leading-none mb-2"
+          style={{ fontSize: "clamp(5rem, 25vw, 9rem)", color: "var(--rust)" }}
+        >
+          {score}
+        </div>
+        <div
+          className="font-display italic text-xl mb-4"
+          style={{ color: "var(--ink)" }}
+        >
+          {score === 1 ? "round completed" : "rounds completed"}
+        </div>
+        <div
+          className="inline-block px-4 py-2 stamp font-mono text-xs"
+          style={{ marginBottom: "1.5rem" }}
+        >
+          {"★ " + rating.toUpperCase() + " ★"}
+        </div>
+
+        {/* The one that got away */}
+        {failed && (
+          <div
+            className="rounded-2xl p-4 mb-6 text-left"
+            style={{ background: "rgba(196,78,71,0.06)", border: "2px solid rgba(196,78,71,0.15)" }}
+          >
+            <div
+              className="font-mono text-[10px] uppercase tracking-widest mb-2"
+              style={{ color: "var(--dusty)" }}
+            >
+              The one that got away
+            </div>
+            <div className="font-display font-bold text-lg" style={{ color: "var(--ink)" }}>
+              {failed.state}
+            </div>
+            <div className="font-body text-sm mt-1" style={{ color: "var(--ink)" }}>
+              Correct: <strong>{gameState.correctAnswer}</strong>
+            </div>
+            <div className="font-body text-sm mt-0.5" style={{ color: "var(--rust)" }}>
+              You picked: <strong>{gameState.selectedAnswer}</strong>
+            </div>
+          </div>
+        )}
+
+        {/* Leaderboard submit */}
+        {score > 0 && (
+          <div className="mb-6">
+            {posted ? (
+              <div className="fade-in">
+                <div
+                  className="rounded-2xl p-4 mb-2"
+                  style={{ background: "rgba(107,142,111,0.12)", border: "2px solid var(--sage)" }}
+                >
+                  <div
+                    className="font-mono text-xs uppercase tracking-widest"
+                    style={{ color: "var(--sage)" }}
+                  >
+                    ✓ Posted to Leaderboard
+                  </div>
+                  {rank && (
+                    <div
+                      className="font-display font-bold text-lg mt-1"
+                      style={{ color: "var(--ink)" }}
+                    >
+                      You're #{rank} on {catLabel}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={onViewLeaderboard}
+                  className="w-full rounded-xl py-2.5 font-mono text-xs uppercase tracking-widest transition hover:opacity-70"
+                  style={{ color: "var(--ink)", border: "2px solid rgba(26,37,55,0.15)" }}
+                >
+                  View Leaderboard
+                </button>
+              </div>
+            ) : showNamePicker && savedNames.length > 0 ? (
+              <div className="fade-in">
+                <div
+                  className="rounded-2xl p-4"
+                  style={{ background: "var(--paper)", border: "2px solid var(--ink)" }}
+                >
+                  <div
+                    className="font-mono text-[10px] uppercase tracking-widest mb-3"
+                    style={{ color: "var(--dusty)" }}
+                  >
+                    Who's Playing?
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {savedNames.map((name) => (
+                      <button
+                        key={name}
+                        onClick={() => handlePost(name)}
+                        disabled={posting}
+                        className="rounded-xl px-4 py-2 font-display font-bold text-sm transition active:scale-[0.96]"
+                        style={{
+                          background: "var(--gold)",
+                          color: "var(--ink)",
+                          border: "2px solid var(--ink)",
+                          boxShadow: "2px 2px 0 var(--ink)",
+                        }}
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => { setShowNamePicker(false); setShowNickInput(true); setNickInput(""); }}
+                    className="font-mono text-[10px] uppercase tracking-widest transition hover:opacity-70"
+                    style={{ color: "var(--dusty)" }}
+                  >
+                    Someone else? →
+                  </button>
+                </div>
+              </div>
+            ) : showNickInput ? (
+              <div className="fade-in">
+                <div
+                  className="rounded-2xl p-4"
+                  style={{ background: "var(--paper)", border: "2px solid var(--ink)" }}
+                >
+                  <div
+                    className="font-mono text-[10px] uppercase tracking-widest mb-3"
+                    style={{ color: "var(--dusty)" }}
+                  >
+                    Choose a Nickname
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={nickInput}
+                      onChange={(e) => { setNickInput(e.target.value.slice(0, 15)); setProfanityError(false); }}
+                      placeholder="Your name..."
+                      autoFocus
+                      className="flex-1 rounded-xl px-3 py-2 font-body text-sm outline-none"
+                      style={{
+                        background: "rgba(26,37,55,0.06)",
+                        color: "var(--ink)",
+                        border: "2px solid rgba(26,37,55,0.15)",
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && nickInput.trim().length >= 3)
+                          handlePost(nickInput.trim());
+                      }}
+                    />
+                    <button
+                      onClick={() => handlePost(nickInput.trim())}
+                      disabled={nickInput.trim().length < 3 || posting}
+                      className="rounded-xl px-4 py-2 font-mono text-xs uppercase tracking-widest font-bold transition"
+                      style={{
+                        background: nickInput.trim().length >= 3 ? "var(--ink)" : "rgba(26,37,55,0.1)",
+                        color: nickInput.trim().length >= 3 ? "var(--cream)" : "var(--dusty)",
+                      }}
+                    >
+                      {posting ? "..." : "Post"}
+                    </button>
+                  </div>
+                  {profanityError ? (
+                    <div className="font-mono text-[10px] mt-1" style={{ color: "var(--rust)" }}>
+                      Please choose an appropriate nickname
+                    </div>
+                  ) : (
+                    <div className="font-mono text-[10px] mt-1" style={{ color: "var(--dusty)" }}>
+                      3-15 characters
+                    </div>
+                  )}
+                  {savedNames.length > 0 && (
+                    <button
+                      onClick={() => { setShowNickInput(false); setShowNamePicker(true); }}
+                      className="font-mono text-[10px] uppercase tracking-widest mt-2 transition hover:opacity-70"
+                      style={{ color: "var(--dusty)" }}
+                    >
+                      ← Back to names
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={startPost}
+                disabled={posting}
+                className="w-full rounded-2xl p-4 font-display font-bold text-lg transition active:scale-[0.98]"
+                style={{
+                  background: "var(--gold)",
+                  color: "var(--ink)",
+                  border: "2px solid var(--ink)",
+                  boxShadow: "3px 3px 0 var(--ink)",
+                }}
+              >
+                {posting ? "Posting..." : "Post to Leaderboard"}
+              </button>
+            )}
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <button
+            onClick={handleRestart}
+            className="w-full rounded-2xl p-4 font-display font-bold text-lg"
+            style={{
+              background: "var(--rust)",
+              color: "var(--cream)",
+              border: "2px solid var(--ink)",
+              boxShadow: "3px 3px 0 var(--ink)",
+            }}
+          >
+            Try Again
+          </button>
+          <button
+            onClick={() => onExit(null)}
+            className="w-full rounded-2xl p-4 font-mono text-xs uppercase tracking-widest"
+            style={{
+              background: "transparent",
+              color: "var(--ink)",
+              border: "2px solid var(--ink)",
+            }}
+          >
+            Back to Menu
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── COUNTDOWN ────────────────────────────────────────────────────
+
+  if (countdown !== null) {
+    const boxStyles = {
+      "Ready?": { rotate: "-2deg", borderColor: "var(--ink)", background: "var(--cream)" },
+      "3": { rotate: "3deg", borderColor: "var(--ink)", background: "var(--paper)" },
+      "2": { rotate: "-4deg", borderColor: "var(--rust)", background: "var(--cream)" },
+      "1": { rotate: "2.5deg", borderColor: "var(--gold)", background: "var(--paper)" },
+      "GO!": { rotate: "-3deg", borderColor: "var(--rust)", background: "rgba(196,78,71,0.08)" },
+    };
+    const bs = boxStyles[countdown];
+    return (
+      <div className="fade-in" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
+        <div
+          key={countdown}
+          style={{
+            border: `3px solid ${bs.borderColor}`,
+            background: bs.background,
+            boxShadow: "4px 4px 0 var(--ink)",
+            borderRadius: "1rem",
+            padding: countdown === "Ready?" ? "1.5rem 2.5rem" : "1rem 2.5rem",
+            transform: `rotate(${bs.rotate})`,
+            animation: "countdownPop 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+          }}
+        >
+          <div
+            className="font-display font-black text-center"
+            style={{
+              fontSize: countdown === "Ready?" ? "clamp(2.5rem, 12vw, 4.5rem)" : countdown === "GO!" ? "clamp(4rem, 20vw, 8rem)" : "clamp(5rem, 25vw, 10rem)",
+              color: countdown === "GO!" ? "var(--rust)" : "var(--ink)",
+              fontVariationSettings: '"SOFT" 100, "WONK" 1',
+              fontStyle: countdown === "GO!" ? "italic" : "normal",
+              lineHeight: 1,
+            }}
+          >
+            {countdown}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── PLAYING: SINGLE PERSISTENT WRAPPER ─────────────────────────
+  // All sub-phases (watch, yourTurn, roundComplete, recall) render inside
+  // one stable div so React doesn't unmount/remount and re-trigger fade-in.
+
+  const isOverlay = showYourTurn || showRoundComplete;
+  const isWatching = !isOverlay && gameState.phase === "watching";
+  const isRecalling = !isOverlay && gameState.phase !== "watching";
+  const watchItem = gameState.sequence[gameState.currentIndex];
+  const recallItem = gameState.sequence[gameState.currentIndex];
+  const answerKey = category === "abbreviations" ? "abbreviation" : "capital";
+  const correctAnswer = recallItem ? recallItem[answerKey] : "";
+
+  return (
+    <div className="fade-in">
+      {/* HUD — always visible during play */}
+      <div className="flex items-center justify-between mb-6">
+        <BackBtn onClick={() => { setWatchStep(-1); onExit(null); }} />
+        <div className="flex gap-2 items-center">
+          <div
+            className="font-mono text-xs px-3 py-1.5 rounded-full font-bold"
+            style={{ background: "rgba(26,37,55,0.08)", color: "var(--ink)" }}
+          >
+            Round {gameState.round}
+          </div>
+          {gameState.highestRound > 0 && (
+            <div
+              className="font-mono text-xs px-3 py-1.5 rounded-full font-bold"
+              style={{ background: "var(--gold)", color: "var(--ink)" }}
+            >
+              Best: {gameState.highestRound}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ─── YOUR TURN overlay ─── */}
+      {showYourTurn && (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "50vh" }}>
+          <div
+            key="your-turn"
+            style={{
+              border: "3px solid var(--sage)",
+              background: "rgba(107,142,111,0.08)",
+              boxShadow: "4px 4px 0 var(--ink)",
+              borderRadius: "1rem",
+              padding: "1.5rem 2.5rem",
+              transform: "rotate(-2deg)",
+              animation: "countdownPop 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+            }}
+          >
+            <div
+              className="font-display font-black text-center"
+              style={{
+                fontSize: "clamp(2.5rem, 12vw, 4.5rem)",
+                color: "var(--sage)",
+                fontVariationSettings: '"SOFT" 100, "WONK" 1',
+                fontStyle: "italic",
+                lineHeight: 1,
+              }}
+            >
+              Your Turn!
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── ROUND COMPLETE overlay ─── */}
+      {showRoundComplete && (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "50vh" }}>
+          <div
+            key={`round-${gameState.round}`}
+            style={{
+              border: "3px solid var(--gold)",
+              background: "rgba(207,174,107,0.08)",
+              boxShadow: "4px 4px 0 var(--ink)",
+              borderRadius: "1rem",
+              padding: "1.5rem 2.5rem",
+              transform: "rotate(2deg)",
+              animation: "countdownPop 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+            }}
+          >
+            <div
+              className="font-display font-black text-center"
+              style={{
+                fontSize: "clamp(2rem, 10vw, 3.5rem)",
+                color: "var(--gold)",
+                fontVariationSettings: '"SOFT" 100, "WONK" 1',
+                lineHeight: 1,
+              }}
+            >
+              Round {gameState.round + 1}!
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── WATCH PHASE ─── */}
+      {isWatching && (
+        <>
+          <div
+            className="font-mono text-[10px] uppercase tracking-widest text-center mb-8"
+            style={{ color: "var(--dusty)" }}
+          >
+            Watch the sequence...
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "40vh" }}>
+            {watchVisible && watchItem && (
+              <div
+                key={`watch-${gameState.currentIndex}`}
+                className="text-center"
+                style={{ animation: "countdownPop 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }}
+              >
+                <div
+                  className="font-display font-black"
+                  style={{
+                    fontSize: "clamp(2.5rem, 12vw, 5rem)",
+                    color: "var(--ink)",
+                    fontVariationSettings: '"SOFT" 100, "WONK" 1',
+                    lineHeight: 1.1,
+                  }}
+                >
+                  {watchItem.state}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-center gap-2 mt-8">
+            {gameState.sequence.map((_, i) => (
+              <div
+                key={i}
+                className="rounded-full"
+                style={{
+                  width: 10,
+                  height: 10,
+                  background: i === gameState.currentIndex && watchVisible
+                    ? "var(--ink)"
+                    : i < gameState.currentIndex
+                    ? "var(--sage)"
+                    : "rgba(26,37,55,0.15)",
+                  transition: "background 0.3s",
+                }}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* ─── RECALL PHASE ─── */}
+      {isRecalling && (
+        <>
+          <div className="text-center mb-2">
+            <div
+              className="font-mono text-[10px] uppercase tracking-widest mb-2"
+              style={{ color: "var(--dusty)" }}
+            >
+              {category === "abbreviations" ? "What's the abbreviation?" : "What's the capital?"}
+            </div>
+            <div
+              className="font-display font-black"
+              style={{
+                fontSize: "clamp(2.5rem, 12vw, 5rem)",
+                color: "var(--ink)",
+                fontVariationSettings: '"SOFT" 100, "WONK" 1',
+                lineHeight: 1.1,
+              }}
+            >
+              #{gameState.currentIndex + 1}
+            </div>
+          </div>
+
+          <div className="flex justify-center gap-2 mb-8">
+            {gameState.sequence.map((_, i) => (
+              <div
+                key={i}
+                className="rounded-full"
+                style={{
+                  width: 10,
+                  height: 10,
+                  background: i < gameState.currentIndex
+                    ? "var(--sage)"
+                    : i === gameState.currentIndex
+                    ? "var(--ink)"
+                    : "rgba(26,37,55,0.15)",
+                  transition: "background 0.3s",
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 gap-3">
+            {options.map((opt) => {
+              const isCorrectOpt = opt === correctAnswer;
+              const showCorrect = flash === "correct" && isCorrectOpt;
+              const showWrong = flash === "wrong" && !isCorrectOpt && opt === gameState.selectedAnswer;
+              const showWrongCorrect = flash === "wrong" && isCorrectOpt;
+              return (
+                <button
+                  key={opt}
+                  onClick={() => handleAnswer(opt)}
+                  disabled={answerLocked}
+                  className="w-full rounded-2xl p-4 font-display font-bold text-lg transition active:scale-[0.98]"
+                  style={{
+                    background: showCorrect
+                      ? "var(--sage)"
+                      : showWrong
+                      ? "var(--rust)"
+                      : showWrongCorrect
+                      ? "rgba(107,142,111,0.15)"
+                      : "var(--paper)",
+                    color: showCorrect || showWrong
+                      ? "var(--cream)"
+                      : "var(--ink)",
+                    border: `2px solid ${
+                      showCorrect ? "var(--sage)" : showWrong ? "var(--rust)" : showWrongCorrect ? "var(--sage)" : "var(--ink)"
+                    }`,
+                    boxShadow: showCorrect || showWrong ? "none" : "2px 2px 0 var(--ink)",
+                    animation: showWrong ? "shake 0.4s ease-in-out" : showCorrect ? "countdownPop 0.3s ease-out" : "none",
+                    opacity: (flash === "wrong" && !showWrong && !showWrongCorrect) ? 0.4 : 1,
+                  }}
+                >
+                  {showCorrect ? "✓ " : ""}{opt}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 // ─── LEADERBOARD ────────────────────────────────────────────────────────
 const timeAgo = (timestamp) => {
   if (!timestamp) return "";
@@ -4037,7 +5520,7 @@ const timeAgo = (timestamp) => {
 const PAGE_SIZE = 20;
 
 const Leaderboard = ({ onBack }) => {
-  const [mode, setMode] = useState("dash"); // dash | reveal
+  const [mode, setMode] = useState("dash"); // dash | reveal | lightning | simon
   const [cat, setCat] = useState("capitals");
   const [scores, setScores] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -4049,8 +5532,9 @@ const Leaderboard = ({ onBack }) => {
   const [nickInput, setNickInput] = useState(nickname);
   const [nickError, setNickError] = useState(false);
 
-  const lb = mode === "reveal" ? revealLeaderboard : leaderboard;
-  const perfectScore = mode === "reveal" ? 100 : 50;
+  const lb = mode === "simon" ? simonLeaderboard : mode === "lightning" ? lightningLeaderboard : mode === "reveal" ? revealLeaderboard : leaderboard;
+  const perfectScore = mode === "simon" ? null : mode === "reveal" ? 100 : mode === "lightning" ? null : 50;
+  const modeLabels = { dash: "60-Second Dash", reveal: "Letter by Letter", lightning: "Lightning Match", simon: "Simon States" };
 
   const fetchScores = useCallback(async (category, board) => {
     setLoading(true);
@@ -4123,34 +5607,34 @@ const Leaderboard = ({ onBack }) => {
           className="font-display font-black text-3xl leading-tight mb-1"
           style={{ color: "var(--ink)", fontVariationSettings: '"SOFT" 100, "WONK" 1' }}
         >
-          {mode === "dash" ? "60-Second Dash" : "Letter by Letter"}
+          {modeLabels[mode]}
         </h2>
         <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: "var(--dusty)" }}>
           Top scores
         </div>
       </div>
 
-      {/* Game mode tabs */}
-      <div
-        className="flex rounded-full mb-4 overflow-hidden"
-        style={{ border: "2px solid var(--ink)" }}
-      >
-        {[
-          { id: "dash", label: "Dash" },
-          { id: "reveal", label: "Letter" },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setMode(tab.id)}
-            className="flex-1 py-2 font-mono text-xs uppercase tracking-widest transition-colors"
-            style={{
-              background: mode === tab.id ? "var(--ink)" : "transparent",
-              color: mode === tab.id ? "var(--cream)" : "var(--ink)",
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Game mode selector */}
+      <div className="mb-4">
+        <select
+          value={mode}
+          onChange={(e) => setMode(e.target.value)}
+          className="w-full rounded-xl py-2.5 px-4 font-mono text-xs uppercase tracking-widest appearance-none cursor-pointer"
+          style={{
+            background: "var(--ink)",
+            color: "var(--cream)",
+            border: "2px solid var(--ink)",
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23F3E8D2' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")`,
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "right 12px center",
+            paddingRight: "36px",
+          }}
+        >
+          <option value="dash">60-Second Dash</option>
+          <option value="reveal">Letter by Letter</option>
+          <option value="simon">Simon States</option>
+          {/* <option value="lightning">Lightning Match</option> */}
+        </select>
       </div>
 
       {/* Category tabs */}
@@ -4204,14 +5688,14 @@ const Leaderboard = ({ onBack }) => {
             className="font-mono text-[10px] uppercase tracking-widest"
             style={{ color: "var(--dusty)" }}
           >
-            Be the first! Play {mode === "dash" ? "60-Second Dash" : "Letter by Letter"}.
+            Be the first! Play {modeLabels[mode]}.
           </div>
         </div>
       ) : (
         <div className="space-y-2">
           {scores.map((entry, i) => {
             const isYou = nickname && entry.name === nickname;
-            const isPerfect = entry.score >= perfectScore;
+            const isPerfect = perfectScore !== null && entry.score >= perfectScore;
             return (
               <div
                 key={entry.id}
@@ -4858,7 +6342,7 @@ export default function App() {
             direction={direction}
             setDirection={setDirection}
             onPick={(id) => {
-              if (["quiz", "type", "speed", "study", "match", "escape", "reveal"].includes(id)) {
+              if (["quiz", "type", "speed", "study", "match", "escape", "reveal", "lightning", "simon"].includes(id)) {
                 ga("game_mode_start", { mode: id, category, direction });
               }
               if (id === "quiz") setScreen("quiz");
@@ -4868,6 +6352,8 @@ export default function App() {
               if (id === "match") setScreen("matchConfig");
               if (id === "escape") setScreen("escapeConfig");
               if (id === "reveal") setScreen("reveal");
+              if (id === "lightning") setScreen("lightning");
+              if (id === "simon") setScreen("simon");
               if (id === "leaderboard") setScreen("leaderboard");
               if (id === "progress") setScreen("progress");
             }}
@@ -4894,6 +6380,12 @@ export default function App() {
         )}
         {screen === "reveal" && (
           <Reveal onExit={handleExit("reveal")} recordResult={recordResult} onViewLeaderboard={() => setScreen("leaderboard")} {...modeProps} />
+        )}
+        {screen === "lightning" && (
+          <LightningMatch onExit={handleExit("lightning")} category={category} onViewLeaderboard={() => setScreen("leaderboard")} />
+        )}
+        {screen === "simon" && (
+          <SimonStates onExit={handleExit("simon")} category={category} onViewLeaderboard={() => setScreen("leaderboard")} />
         )}
         {screen === "study" && (
           <Study

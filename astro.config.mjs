@@ -8,7 +8,9 @@ import react from '@astrojs/react';
 // https://astro.build/config
 export default defineConfig({
   site: 'https://franzketechnologies.com',
-  integrations: [sitemap(), react()],
+  integrations: [sitemap({
+    filter: (page) => !page.includes('/admin') && !page.includes('/thank-you'),
+  }), react()],
   vite: {
     plugins: [tailwindcss()]
   }
