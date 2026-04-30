@@ -121,7 +121,9 @@ export default function ClientList() {
                         {client.active ? "Active" : "Inactive"}
                       </span>
                     </div>
-                    <p className="text-sm text-white/50 mt-1">{client.domain}</p>
+                    <p className="text-sm text-white/50 mt-1">
+                      {client.domains?.join(", ") || client.domain}
+                    </p>
                     <p className="text-sm text-white/40 mt-1">
                       {client.recipients?.join(", ")}
                     </p>

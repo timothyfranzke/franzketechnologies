@@ -30,7 +30,7 @@ async function validateClient(origin, apiKey) {
   // Localhost can match any client by API key alone
   if (!isLocalhost(origin)) {
     const domain = origin.replace(/^https?:\/\//, "").replace(/\/$/, "");
-    query = query.where("domain", "==", domain);
+    query = query.where("domains", "array-contains", domain);
   }
 
   const snapshot = await query.limit(1).get();
@@ -84,9 +84,11 @@ export const sendEmail = onRequest(
 
       const allowedOrigins = new Set();
       clientsSnap.forEach((doc) => {
-        const domain = doc.data().domain;
-        allowedOrigins.add(`https://${domain}`);
-        allowedOrigins.add(`http://${domain}`);
+        const domains = doc.data().domains || [];
+        domains.forEach((d) => {
+          allowedOrigins.add(`https://${d}`);
+          allowedOrigins.add(`http://${d}`);
+        });
       });
 
       if (allowedOrigins.has(origin) || isLocalhost(origin)) {
