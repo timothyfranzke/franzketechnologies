@@ -4,6 +4,7 @@ import Dashboard from "./Dashboard.jsx";
 import Ledger from "./Ledger.jsx";
 import AddExpense from "./AddExpense.jsx";
 import Share from "./Share.jsx";
+import OfflineBanner from "./OfflineBanner.jsx";
 import {
   subscribeTrip,
   subscribeExpenses,
@@ -281,6 +282,7 @@ function TripAppInner({ code }) {
   // ─── Normal trip view ────────────────────────────────────
   return (
     <Shell trip={trip} myFamily={myFamily}>
+      <OfflineBanner />
       {autoJoinError && (
         <div
           style={{

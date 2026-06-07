@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import VacationStyles from "./VacationStyles.jsx";
+import InstallButton from "./InstallButton.jsx";
 import { getTrips, removeTrip } from "../../lib/vacationStorage.js";
 
 function TripCard({ trip, onForget, onOpen }) {
@@ -142,7 +143,7 @@ export default function VacationLanding() {
           </p>
         </div>
 
-        <div style={{ display: "grid", gap: "0.75rem", marginBottom: "2rem" }}>
+        <div style={{ display: "grid", gap: "0.75rem", marginBottom: "1.25rem" }}>
           <a href="/vacation/new" className="btn-primary" style={{ textAlign: "center", textDecoration: "none", display: "block" }}>
             Create a trip
           </a>
@@ -150,6 +151,8 @@ export default function VacationLanding() {
             Enter a code
           </a>
         </div>
+
+        <InstallButton />
 
         {ready && trips.length > 0 && (
           <div>
