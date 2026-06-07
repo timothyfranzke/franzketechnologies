@@ -43,6 +43,7 @@ export default defineConfig({
       workbox: {
         navigateFallback: '/vacation',
         navigateFallbackAllowlist: [/^\/vacation/],
+        navigateFallbackDenylist: [/^\/vacation\/trip/],
         globPatterns: [
           'vacation/**/*.{html,svg,png,ico,webmanifest}',
           'vacation.webmanifest',
