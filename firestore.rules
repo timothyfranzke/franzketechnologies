@@ -16,5 +16,13 @@ service cloud.firestore {
     match /speed-scores/{document=**} {
       allow read, write: if true;
     }
+
+    // Vacation expense splitter — open like the games, 6-char code is the secret
+    match /trips/{tripId} {
+      allow read, write: if true;
+      match /expenses/{expenseId} {
+        allow read, write: if true;
+      }
+    }
   }
 }

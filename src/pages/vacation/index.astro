@@ -1,0 +1,25 @@
+---
+import '../../styles/game.css';
+import VacationLanding from '../../components/vacation/VacationLanding.jsx';
+
+const title = 'Vacation Ledger — Split & Settle';
+const description = 'Track what every family spends on a shared trip and see who owes whom. No accounts, just a 6-character code.';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta name="theme-color" content="#F3E8D2" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <title>{title}</title>
+  </head>
+  <body style="margin: 0; padding: 0;">
+    <VacationLanding client:only="react" />
+  </body>
+</html>
