@@ -10,21 +10,37 @@ function loadCredential() {
       console.error('FIREBASE_SERVICE_ACCOUNT is not valid JSON:', err.message);
     }
   }
-  return applicationDefault();
+  try {
+    return applicationDefault();
+  } catch {
+    return null;
+  }
 }
 
-function getApp() {
-  if (getApps().length) return getApps()[0];
-  return initializeApp({
-    credential: loadCredential(),
-    projectId:
-      process.env.FIREBASE_PROJECT_ID ||
-      process.env.PUBLIC_FIREBASE_PROJECT_ID ||
-      'franzke-creative',
-  });
-}
+let adminDbInstance = null;
+let initFailed = false;
 
-const adminDb = getFirestore(getApp());
+function getAdminDb() {
+  if (adminDbInstance) return adminDbInstance;
+  if (initFailed) return null;
+  try {
+    const app = getApps().length
+      ? getApps()[0]
+      : initializeApp({
+          credential: loadCredential() || undefined,
+          projectId:
+            process.env.FIREBASE_PROJECT_ID ||
+            process.env.PUBLIC_FIREBASE_PROJECT_ID ||
+            'franzke-creative',
+        });
+    adminDbInstance = getFirestore(app);
+    return adminDbInstance;
+  } catch (err) {
+    console.error('firebase-admin init failed (OG will fall back to generic):', err.message);
+    initFailed = true;
+    return null;
+  }
+}
 
 function normalizeFamily(f) {
   if (!f) return null;
@@ -41,6 +57,9 @@ export async function getTripSummary(code) {
   if (!code) return null;
   const clean = String(code).trim().toUpperCase();
   if (!/^[A-Z0-9]{6}$/.test(clean)) return null;
+
+  const adminDb = getAdminDb();
+  if (!adminDb) return null;
 
   try {
     const tripSnap = await adminDb.collection('trips').doc(clean).get();
