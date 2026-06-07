@@ -1,0 +1,124 @@
+---
+interface Props {
+  businessName: string;
+  guid: string;
+}
+
+const { businessName, guid } = Astro.props;
+const storageKey = `preview-ribbon-dismissed-${guid}`;
+---
+
+<div id="preview-ribbon" data-key={storageKey} class="preview-ribbon">
+  <div class="preview-ribbon-inner">
+    <span class="preview-ribbon-label">Preview</span>
+    <span class="preview-ribbon-body">
+      <strong>Preview for {businessName}</strong> — this is what your website could look like. Built by Tim Franzke.
+    </span>
+    <a class="preview-ribbon-cta" href={`/contact?ref=${guid}`}>Let's talk →</a>
+    <button type="button" class="preview-ribbon-close" aria-label="Dismiss preview banner">×</button>
+  </div>
+</div>
+
+<style>
+  .preview-ribbon {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: #0a0a1f;
+    color: #e2e8f0;
+    font-family: "Poppins", sans-serif;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(0, 212, 255, 0.35);
+  }
+
+  .preview-ribbon-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .preview-ribbon-label {
+    background: #00d4ff;
+    color: #0a0a1f;
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .preview-ribbon-body {
+    flex: 1;
+    line-height: 1.4;
+  }
+
+  .preview-ribbon-body strong {
+    color: #ffffff;
+  }
+
+  .preview-ribbon-cta {
+    color: #00d4ff;
+    text-decoration: none;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .preview-ribbon-cta:hover {
+    color: #5ee7ff;
+  }
+
+  .preview-ribbon-close {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+  }
+
+  .preview-ribbon-close:hover {
+    color: #ffffff;
+  }
+
+  @media (max-width: 640px) {
+    .preview-ribbon {
+      font-size: 12px;
+    }
+
+    .preview-ribbon-inner {
+      padding: 8px 14px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .preview-ribbon-body {
+      flex: 1 1 100%;
+      order: 3;
+      font-size: 11px;
+    }
+
+    .preview-ribbon-cta {
+      margin-left: auto;
+    }
+  }
+</style>
+
+<script>
+  const ribbon = document.getElementById("preview-ribbon");
+  if (ribbon) {
+    const key = ribbon.dataset.key!;
+    if (sessionStorage.getItem(key) === "1") {
+      ribbon.style.display = "none";
+    }
+    ribbon.querySelector(".preview-ribbon-close")?.addEventListener("click", () => {
+      sessionStorage.setItem(key, "1");
+      ribbon.style.display = "none";
+    });
+  }
+</script>

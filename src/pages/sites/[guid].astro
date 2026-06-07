@@ -1,0 +1,26 @@
+---
+import fs from "node:fs";
+import path from "node:path";
+import type { ProspectSite } from "../../lib/preview/schema";
+import PreviewLayout from "../../layouts/PreviewLayout.astro";
+
+export async function getStaticPaths() {
+  const contentDir = path.resolve("src/content/sites");
+  if (!fs.existsSync(contentDir)) return [];
+
+  const entries = fs
+    .readdirSync(contentDir)
+    .filter((file) => file.endsWith(".json"));
+
+  return entries.map((file) => {
+    const raw = fs.readFileSync(path.join(contentDir, file), "utf-8");
+    const data = JSON.parse(raw) as ProspectSite;
+    return { params: { guid: data.guid }, props: { data } };
+  });
+}
+
+type Props = { data: ProspectSite };
+const { data } = Astro.props as Props;
+---
+
+<PreviewLayout data={data} />

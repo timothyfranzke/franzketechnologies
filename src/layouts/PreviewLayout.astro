@@ -1,0 +1,73 @@
+---
+import type { ProspectSite } from "../lib/preview/schema";
+import PreviewRibbon from "../components/preview/PreviewRibbon.astro";
+import PreviewHero from "../components/preview/PreviewHero.astro";
+import PreviewServices from "../components/preview/PreviewServices.astro";
+import PreviewReviews from "../components/preview/PreviewReviews.astro";
+import PreviewHoursLocation from "../components/preview/PreviewHoursLocation.astro";
+import PreviewContactCTA from "../components/preview/PreviewContactCTA.astro";
+import PreviewFooter from "../components/preview/PreviewFooter.astro";
+
+interface Props {
+  data: ProspectSite;
+}
+
+const { data } = Astro.props;
+const title = `${data.name} — ${data.city}, ${data.state}`;
+const description = data.tagline
+  ?? `${data.name} — ${data.category} in ${data.city}, ${data.state}. ${data.rating.toFixed(1)}★ on Google with ${data.reviewCount}+ reviews.`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{title}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <PreviewRibbon businessName={data.name} guid={data.guid} />
+    <main>
+      <PreviewHero data={data} />
+      <PreviewServices data={data} />
+      <PreviewReviews data={data} />
+      <PreviewHoursLocation data={data} />
+      <PreviewContactCTA data={data} />
+    </main>
+    <PreviewFooter data={data} />
+
+    <style is:global>
+      *, *::before, *::after {
+        box-sizing: border-box;
+      }
+
+      html, body {
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: "Poppins", system-ui, -apple-system, sans-serif;
+        font-size: 16px;
+        line-height: 1.55;
+        color: #111827;
+        background: #ffffff;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      img {
+        max-width: 100%;
+        display: block;
+      }
+
+      a {
+        color: inherit;
+      }
+    </style>
+  </body>
+</html>

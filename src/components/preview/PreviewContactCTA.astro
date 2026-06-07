@@ -1,0 +1,190 @@
+---
+import type { ProspectSite } from "../../lib/preview/schema";
+import { paletteFor } from "../../lib/preview/palette";
+
+interface Props {
+  data: ProspectSite;
+}
+
+const { data } = Astro.props;
+const palette = paletteFor(data.vertical);
+const gradient = `linear-gradient(135deg, ${palette.from} 0%, ${palette.via} 100%)`;
+---
+
+<section id="contact" class="preview-contact" style={`background: ${gradient};`}>
+  <div class="preview-contact-inner">
+    <p class="preview-contact-eyebrow">Get in touch</p>
+    <h2 class="preview-contact-title">We'd love to hear from you.</h2>
+    <p class="preview-contact-body">
+      Whether you have a question, a special request, or just want to say hello — reach out.
+    </p>
+
+    <div class="preview-contact-grid">
+      {data.phone && (
+        <div class="preview-contact-card">
+          <p class="preview-contact-card-label">Call</p>
+          <a class="preview-contact-card-value" href={`tel:${data.phone.replace(/[^0-9+]/g, "")}`}>
+            {data.phone}
+          </a>
+        </div>
+      )}
+      {data.address && (
+        <div class="preview-contact-card">
+          <p class="preview-contact-card-label">Visit</p>
+          <p class="preview-contact-card-value">{data.address}</p>
+        </div>
+      )}
+    </div>
+
+    <form class="preview-contact-form" aria-label="Contact form" onsubmit="event.preventDefault(); this.querySelector('.preview-form-note').hidden = false;">
+      <label class="preview-form-field">
+        <span>Name</span>
+        <input type="text" name="name" required />
+      </label>
+      <label class="preview-form-field">
+        <span>Email</span>
+        <input type="email" name="email" required />
+      </label>
+      <label class="preview-form-field preview-form-field-full">
+        <span>Message</span>
+        <textarea name="message" rows="4" required></textarea>
+      </label>
+      <button type="submit" class="preview-form-submit">Send message</button>
+      <p class="preview-form-note" hidden>Thanks — we'll be in touch.</p>
+    </form>
+  </div>
+</section>
+
+<style>
+  .preview-contact {
+    padding: 96px 24px;
+    color: #ffffff;
+  }
+
+  .preview-contact-inner {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .preview-contact-eyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.85;
+    margin: 0 0 14px;
+  }
+
+  .preview-contact-title {
+    font-family: "Bebas Neue", "Poppins", sans-serif;
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    margin: 0 0 18px;
+  }
+
+  .preview-contact-body {
+    font-size: 1.1rem;
+    line-height: 1.55;
+    opacity: 0.92;
+    max-width: 580px;
+    margin: 0 0 40px;
+  }
+
+  .preview-contact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+    margin-bottom: 48px;
+  }
+
+  .preview-contact-card {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    padding: 20px;
+  }
+
+  .preview-contact-card-label {
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.7;
+    margin: 0 0 8px;
+  }
+
+  .preview-contact-card-value {
+    display: block;
+    color: #ffffff;
+    font-size: 1.05rem;
+    font-weight: 500;
+    text-decoration: none;
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  .preview-contact-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  .preview-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.85rem;
+  }
+
+  .preview-form-field span {
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    opacity: 0.85;
+  }
+
+  .preview-form-field input,
+  .preview-form-field textarea {
+    background: rgba(255, 255, 255, 0.95);
+    color: #111827;
+    border: none;
+    border-radius: 4px;
+    padding: 12px 14px;
+    font-size: 1rem;
+    font-family: inherit;
+  }
+
+  .preview-form-field-full {
+    grid-column: 1 / -1;
+  }
+
+  .preview-form-submit {
+    grid-column: 1 / -1;
+    justify-self: start;
+    background: #ffffff;
+    color: #111827;
+    border: none;
+    padding: 14px 28px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
+  .preview-form-submit:hover {
+    background: #f3f4f6;
+  }
+
+  .preview-form-note {
+    grid-column: 1 / -1;
+    margin: 0;
+    font-weight: 500;
+  }
+
+  @media (max-width: 540px) {
+    .preview-contact-form {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

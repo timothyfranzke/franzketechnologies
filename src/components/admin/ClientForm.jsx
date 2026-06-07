@@ -19,7 +19,9 @@ export default function ClientForm({ client, onCancel, onSaved }) {
   const isEditing = !!client;
 
   const [name, setName] = useState(client?.name || "");
-  const [domain, setDomain] = useState(client?.domain || "");
+  const [domains, setDomains] = useState(
+    client?.domains?.join(", ") || client?.domain || ""
+  );
   const [recipients, setRecipients] = useState(
     client?.recipients?.join(", ") || ""
   );
@@ -46,9 +48,20 @@ export default function ClientForm({ client, onCancel, onSaved }) {
     setSaving(true);
 
     try {
+      const domainList = domains
+        .split(",")
+        .map((d) => d.trim().replace(/^https?:\/\//, "").replace(/\/$/, ""))
+        .filter(Boolean);
+
+      if (domainList.length === 0) {
+        setError("At least one domain is required");
+        setSaving(false);
+        return;
+      }
+
       const data = {
         name: name.trim(),
-        domain: domain.trim().replace(/^https?:\/\//, "").replace(/\/$/, ""),
+        domains: domainList,
         recipients: recipientList,
         apiKey,
         fromName: fromName.trim() || null,
@@ -96,13 +109,16 @@ export default function ClientForm({ client, onCancel, onSaved }) {
             </div>
 
             <div>
-              <label className="block text-sm text-white/70 mb-1">Domain</label>
+              <label className="block text-sm text-white/70 mb-1">
+                Domains{" "}
+                <span className="text-white/40">(comma-separated)</span>
+              </label>
               <input
                 type="text"
-                value={domain}
-                onChange={(e) => setDomain(e.target.value)}
+                value={domains}
+                onChange={(e) => setDomains(e.target.value)}
                 required
-                placeholder="kc360gym.com"
+                placeholder="kc360gym.com, kc360gymnastics.com"
                 className={inputClass}
               />
             </div>

@@ -1,0 +1,10 @@
+[
+  { "city": "Kansas City", "state": "MO" },
+  { "city": "Topeka", "state": "KS" },
+  { "city": "St. Louis", "state": "MO" },
+  { "city": "Omaha", "state": "NE" },
+  { "city": "Des Moines", "state": "IA" },
+  { "city": "Springfield", "state": "MO" },
+  { "city": "Wichita", "state": "KS" },
+  { "city": "Lincoln", "state": "NE" }
+]

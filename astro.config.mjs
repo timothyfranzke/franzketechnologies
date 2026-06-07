@@ -13,7 +13,9 @@ export default defineConfig({
   output: 'static',
   adapter: netlify(),
   integrations: [
-    sitemap(),
+    sitemap({
+      filter: (page) => !page.includes('/admin') && !page.includes('/thank-you'),
+    }),
     react(),
     AstroPWA({
       registerType: 'autoUpdate',
