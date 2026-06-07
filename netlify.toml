@@ -1,0 +1,21 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+[functions."og"]
+  included_files = ["netlify/functions/og-fonts/**"]
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Service-Worker-Allowed = "/vacation/"
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/vacation.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"

@@ -1,0 +1,31 @@
+---
+import '../../styles/game.css';
+import CreateTrip from '../../components/vacation/CreateTrip.jsx';
+
+const title = 'New Trip — Vacation Ledger';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#F3E8D2" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="manifest" href="/vacation.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Vacation" />
+    <link rel="apple-touch-icon" href="/vacation/icon-192.png" />
+    <title>{title}</title>
+  </head>
+  <body style="margin: 0; padding: 0;">
+    <CreateTrip client:only="react" />
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js', { scope: '/vacation/' }).catch(() => {});
+        });
+      }
+    </script>
+  </body>
+</html>

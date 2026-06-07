@@ -1,0 +1,79 @@
+---
+export const prerender = false;
+
+import '../../styles/game.css';
+import TripApp from '../../components/vacation/TripApp.jsx';
+import { computeOgPayload, buildOgImageUrl } from '../../lib/og-data.js';
+
+const code = Astro.url.searchParams.get('code');
+const family = Astro.url.searchParams.get('family');
+
+let payload = { variant: 'generic', title: 'Vacation Splitter', subtitle: 'Split shared trip expenses across families.', expenseCount: 0 };
+try {
+  payload = await computeOgPayload({ code, family });
+} catch (err) {
+  console.error('Failed to compute OG payload, falling back to generic:', err);
+}
+
+const origin = Astro.url.origin;
+const ogImageUrl = buildOgImageUrl(origin, {
+  code,
+  family,
+  expenseCount: payload.expenseCount,
+});
+
+const pageTitle =
+  payload.variant === 'family-balance'
+    ? `${payload.title} · Vacation Splitter`
+    : payload.variant === 'trip-stats'
+    ? `${payload.tripName} · Vacation Splitter`
+    : 'Trip — Vacation Splitter';
+
+const ogTitle =
+  payload.variant === 'family-balance' || payload.variant === 'trip-stats'
+    ? pageTitle
+    : 'Vacation Splitter';
+const ogDescription =
+  payload.subtitle ||
+  (payload.variant === 'family-balance' ? `on ${payload.tripName}` : 'Split shared trip expenses across families.');
+const canonicalPath = '/vacation/trip' + (code ? `?code=${encodeURIComponent(code)}` : '');
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#F3E8D2" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <meta name="robots" content="noindex" />
+    <title>{pageTitle}</title>
+
+    <link rel="manifest" href="/vacation.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Vacation" />
+    <link rel="apple-touch-icon" href="/vacation/icon-192.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={ogTitle} />
+    <meta property="og:description" content={ogDescription} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:url" content={`${origin}${canonicalPath}`} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={ogTitle} />
+    <meta name="twitter:description" content={ogDescription} />
+    <meta name="twitter:image" content={ogImageUrl} />
+  </head>
+  <body style="margin: 0; padding: 0;">
+    <TripApp client:only="react" />
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js', { scope: '/vacation/' }).catch(() => {});
+        });
+      }
+    </script>
+  </body>
+</html>
