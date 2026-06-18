@@ -1,0 +1,62 @@
+---
+import type { ClientItem } from "../../../lib/clients/schema";
+
+interface Props {
+  item: Extract<ClientItem, { type: "link" }>;
+}
+
+const { item } = Astro.props;
+---
+
+<a href={item.href} target="_blank" rel="noopener noreferrer" class="link-item">
+  <div class="content">
+    <span class="label">{item.label}</span>
+    {item.caption && <span class="caption">{item.caption}</span>}
+  </div>
+  <span class="action" aria-hidden="true">&rarr;</span>
+</a>
+
+<style>
+  .link-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    background: #ffffff;
+    color: #111827;
+    text-decoration: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .link-item:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    text-decoration: none;
+  }
+
+  .content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  .label {
+    font-weight: 500;
+    color: #1d4ed8;
+  }
+
+  .caption {
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+
+  .action {
+    flex-shrink: 0;
+    color: #9ca3af;
+    font-size: 1.125rem;
+  }
+</style>

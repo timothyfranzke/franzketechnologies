@@ -1,0 +1,72 @@
+{
+  "guid": "c26",
+  "client": "C26 Aquatics",
+  "intro": "Where we are on the C26 Aquatics site so far. Have a look through, jot down anything that feels off or that you'd like changed, and let me know.",
+  "updatedAt": "2026-06-18",
+  "sections": [
+    {
+      "title": "Wireframes",
+      "description": "Page structure and content blocks for each page. No styling yet — this is about layout and what goes where.",
+      "items": [
+        {
+          "type": "link",
+          "href": "/clients/c26/wireframes.html",
+          "label": "Interactive HTML wireframe",
+          "caption": "Click through the layout in your browser"
+        },
+        {
+          "type": "pdf",
+          "src": "/clients/c26/wireframes.pdf",
+          "caption": "Full wireframe deck (PDF)"
+        }
+      ]
+    },
+    {
+      "title": "Visual direction",
+      "description": "Early mockups exploring tone, color, and overall feel. Captions are placeholders — let me know which direction resonates.",
+      "items": [
+        {
+          "type": "image",
+          "src": "/clients/c26/mockup-1.png",
+          "caption": "Mockup 1"
+        },
+        {
+          "type": "image",
+          "src": "/clients/c26/mockup-2.png",
+          "caption": "Mockup 2"
+        },
+        {
+          "type": "image",
+          "src": "/clients/c26/mockup-3.png",
+          "caption": "Mockup 3"
+        },
+        {
+          "type": "image",
+          "src": "/clients/c26/mockup-4.png",
+          "caption": "Mockup 4"
+        },
+        {
+          "type": "image",
+          "src": "/clients/c26/mockup-5.png",
+          "caption": "Mockup 5"
+        },
+        {
+          "type": "image",
+          "src": "/clients/c26/mockup-6.png",
+          "caption": "Mockup 6"
+        }
+      ]
+    },
+    {
+      "title": "Reference",
+      "description": "Additional reference material.",
+      "items": [
+        {
+          "type": "image",
+          "src": "/clients/c26/reference-1.png",
+          "caption": "Reference 1"
+        }
+      ]
+    }
+  ]
+}

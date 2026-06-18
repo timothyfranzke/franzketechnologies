@@ -1,0 +1,47 @@
+---
+import type { ClientItem } from "../../../lib/clients/schema";
+
+interface Props {
+  item: Extract<ClientItem, { type: "image" }>;
+}
+
+const { item } = Astro.props;
+const altText = item.alt ?? item.caption ?? "";
+---
+
+<figure class="image-item">
+  <a href={item.src} target="_blank" rel="noopener noreferrer" class="image-link">
+    <img src={item.src} alt={altText} loading="lazy" />
+  </a>
+  {item.caption && <figcaption>{item.caption}</figcaption>}
+</figure>
+
+<style>
+  .image-item {
+    margin: 0;
+  }
+
+  .image-link {
+    display: block;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    text-decoration: none;
+  }
+
+  .image-link:hover {
+    text-decoration: none;
+  }
+
+  img {
+    width: 100%;
+    height: auto;
+  }
+
+  figcaption {
+    margin-top: 0.625rem;
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+</style>

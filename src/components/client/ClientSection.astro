@@ -1,0 +1,54 @@
+---
+import type { ClientSection } from "../../lib/clients/schema";
+import ImageItem from "./items/ImageItem.astro";
+import PdfItem from "./items/PdfItem.astro";
+import LinkItem from "./items/LinkItem.astro";
+
+interface Props {
+  section: ClientSection;
+}
+
+const { section } = Astro.props;
+---
+
+<section class="section">
+  <h2 class="title">{section.title}</h2>
+  {section.description && <p class="description">{section.description}</p>}
+
+  <div class="items">
+    {
+      section.items.map((item) => {
+        if (item.type === "image") return <ImageItem item={item} />;
+        if (item.type === "pdf") return <PdfItem item={item} />;
+        if (item.type === "link") return <LinkItem item={item} />;
+        return null;
+      })
+    }
+  </div>
+</section>
+
+<style>
+  .section {
+    scroll-margin-top: 1rem;
+  }
+
+  .title {
+    margin: 0 0 0.5rem;
+    font-family: "Bebas Neue", system-ui, sans-serif;
+    font-size: 1.75rem;
+    letter-spacing: 0.02em;
+    color: #111827;
+  }
+
+  .description {
+    margin: 0 0 1.5rem;
+    color: #4b5563;
+    font-size: 0.9375rem;
+  }
+
+  .items {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+</style>
