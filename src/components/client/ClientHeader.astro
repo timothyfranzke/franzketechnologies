@@ -1,0 +1,36 @@
+---
+interface Props {
+  client: string;
+}
+
+const { client } = Astro.props;
+---
+
+<header class="header">
+  <p class="eyebrow">Project Resources</p>
+  <h1 class="client-name">{client}</h1>
+</header>
+
+<style>
+  .header {
+    margin-bottom: 2.5rem;
+  }
+
+  .eyebrow {
+    margin: 0 0 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #6b7280;
+  }
+
+  .client-name {
+    margin: 0;
+    font-family: "Bebas Neue", system-ui, sans-serif;
+    font-size: clamp(2.25rem, 6vw, 3.25rem);
+    line-height: 1.05;
+    letter-spacing: 0.01em;
+    color: #111827;
+  }
+</style>

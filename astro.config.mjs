@@ -14,7 +14,10 @@ export default defineConfig({
   adapter: netlify(),
   integrations: [
     sitemap({
-      filter: (page) => !page.includes('/admin') && !page.includes('/thank-you'),
+      filter: (page) =>
+        !page.includes('/admin') &&
+        !page.includes('/thank-you') &&
+        !page.includes('/clients/'),
     }),
     react(),
     AstroPWA({
