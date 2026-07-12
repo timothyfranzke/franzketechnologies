@@ -77,6 +77,9 @@ Full-stack development for web applications, ecommerce platforms, and custom sof
 /blog                 # Blog listing
 /blog/[slug]          # Individual blog posts
 /contact              # Contact form or booking link
+/ledger               # Checkbook Ledger PWA — local-only, offline personal
+                      #   register (IndexedDB via Dexie, noindex, own SW at
+                      #   public/ledger-sw.js; NOT the vacation @vite-pwa setup)
 ```
 
 ## Blog Content Strategy

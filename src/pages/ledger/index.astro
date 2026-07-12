@@ -1,0 +1,39 @@
+---
+import LedgerApp from '../../components/ledger/App.jsx';
+
+const title = 'Checkbook Ledger';
+const description =
+  'A private, offline checkbook register. Enter charges before the bank shows them, mark them cleared, and reconcile to the penny.';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F4F5F8" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0E1116" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="manifest" href="/ledger.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Ledger" />
+    <link rel="apple-touch-icon" href="/ledger/icon-192.png" />
+    <title>{title}</title>
+  </head>
+  <body style="margin: 0; padding: 0; background: #F4F5F8;">
+    <LedgerApp client:only="react" />
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/ledger-sw.js', { scope: '/ledger/' }).catch(() => {});
+        });
+      }
+    </script>
+  </body>
+</html>
