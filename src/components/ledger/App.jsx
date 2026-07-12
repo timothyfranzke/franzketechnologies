@@ -11,6 +11,9 @@ import { centsFromDecimal } from './money.js';
 import Register from './views/Register.jsx';
 import AccountsSheet from './views/AccountsSheet.jsx';
 import EntryForm from './views/EntryForm.jsx';
+import Reconcile from './views/Reconcile.jsx';
+import BatchSelect from './views/BatchSelect.jsx';
+import ReconcileHistory from './views/ReconcileHistory.jsx';
 import { PlusIcon } from './components/icons.jsx';
 
 // View state machine: `view.name` picks the screen, the rest carries context
@@ -80,6 +83,17 @@ export default function App() {
           openingBalance={view.openingBalance}
           onClose={() => setView({ name: 'register' })}
         />
+      ) : view.name === 'reconcile' ? (
+        <Reconcile account={account} preChecked={view.preChecked} onClose={() => setView({ name: 'register' })} />
+      ) : view.name === 'batchSelect' ? (
+        <BatchSelect
+          account={account}
+          categories={categories}
+          onReconcile={(ids) => setView({ name: 'reconcile', preChecked: ids })}
+          onClose={() => setView({ name: 'register' })}
+        />
+      ) : view.name === 'history' ? (
+        <ReconcileHistory account={account} onClose={() => setView({ name: 'register' })} />
       ) : (
         <Register
           account={account}
@@ -88,6 +102,9 @@ export default function App() {
           onEditTransaction={(tx) => setView({ name: 'entry', txId: tx.id })}
           onReconcile={() => setView({ name: 'reconcile' })}
           onAccounts={() => setAccountsOpen(true)}
+          onBatchSelect={() => setView({ name: 'batchSelect' })}
+          onHistory={() => setView({ name: 'history' })}
+          onSettings={() => setView({ name: 'settings' })}
         />
       )}
 

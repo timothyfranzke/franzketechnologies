@@ -86,6 +86,56 @@ describe('App smoke', () => {
     expect(screen.getAllByText('$500.00').length).toBeGreaterThanOrEqual(1);
   });
 
+  it('reconciles to zero and locks transactions (acceptance #4)', async () => {
+    const acct = await createAccount({ name: 'Checking', startingBalance: 50000 });
+    const tx = await addTransaction({ accountId: acct.id, type: 'expense', payee: 'Target', amount: 11373, cleared: true });
+
+    render(<App />);
+    await waitFor(() => screen.getByText('Reconcile'));
+    fireEvent.click(screen.getByText('Reconcile'));
+
+    // statement ending balance $386.27
+    await waitFor(() => screen.getByText('Start reconciling'));
+    for (const digit of ['3', '8', '6', '2', '7']) {
+      fireEvent.click(screen.getByRole('button', { name: digit }));
+    }
+    fireEvent.click(screen.getByText('Start reconciling'));
+
+    // the cleared expense is pre-checked → balanced immediately
+    await waitFor(() => expect(screen.getByText('Balanced to the penny.')).toBeTruthy());
+    fireEvent.click(screen.getByText('Finish reconciliation'));
+
+    await waitFor(async () => {
+      const locked = await db.transactions.get(tx.id);
+      expect(locked.reconciled).toBe(true);
+    });
+    const log = await db.reconciliations.toArray();
+    expect(log).toHaveLength(1);
+    expect(log[0].endingBalance).toBe(38627);
+  });
+
+  it('batch select marks several outstanding transactions cleared', async () => {
+    const acct = await createAccount({ name: 'Checking', startingBalance: 50000 });
+    await addTransaction({ accountId: acct.id, type: 'expense', payee: 'Target', amount: 5432 });
+    await addTransaction({ accountId: acct.id, type: 'expense', payee: 'Shell', amount: 4820 });
+
+    render(<App />);
+    await waitFor(() => screen.getByLabelText('More actions'));
+    fireEvent.click(screen.getByLabelText('More actions'));
+    fireEvent.click(screen.getByText('Select transactions'));
+
+    await waitFor(() => screen.getByText('Select outstanding'));
+    await waitFor(() => expect(screen.getByText('Outstanding · 2')).toBeTruthy());
+    fireEvent.click(screen.getByText('All'));
+    await waitFor(() =>
+      expect(screen.getByText((_, el) => el.className?.includes?.('batch-count') && /2 selected/.test(el.textContent))).toBeTruthy()
+    );
+    fireEvent.click(screen.getByText('Mark cleared'));
+
+    await waitFor(() => expect(screen.getByText('Cleared · 2')).toBeTruthy());
+    expect((await db.transactions.toArray()).every((t) => t.cleared)).toBe(true);
+  });
+
   it('warns when editing a reconciled transaction', async () => {
     const acct = await createAccount({ name: 'Checking', startingBalance: 50000 });
     await addTransaction({ accountId: acct.id, type: 'expense', payee: 'Rent', amount: 145000, cleared: true, reconciled: true });

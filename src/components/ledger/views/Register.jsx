@@ -12,10 +12,11 @@ import { PlusIcon, ReconcileIcon } from '../components/icons.jsx';
  * The main per-account register (mockup 1a): summary header, filter row,
  * Outstanding + Cleared groups in a virtualized list, FAB.
  */
-export default function Register({ account, categories, onNewTransaction, onEditTransaction, onReconcile, onAccounts }) {
+export default function Register({ account, categories, onNewTransaction, onEditTransaction, onReconcile, onAccounts, onBatchSelect, onHistory, onSettings }) {
   const [hideCleared, setHideCleared] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -91,7 +92,28 @@ export default function Register({ account, categories, onNewTransaction, onEdit
           setSearchOpen((v) => !v);
           if (searchOpen) setSearch('');
         }}
+        menuSlot={
+          <button type="button" className="icon-btn" onClick={() => setMenuOpen(true)} aria-label="More actions" aria-haspopup="menu">
+            <span style={{ fontWeight: 700, letterSpacing: 1, paddingBottom: 6 }}>…</span>
+          </button>
+        }
       />
+
+      {menuOpen && (
+        <div className="sheet-backdrop" onClick={() => setMenuOpen(false)}>
+          <div className="sheet" onClick={(e) => e.stopPropagation()} role="menu" aria-label="Account actions">
+            <button type="button" className="sheet-row" role="menuitem" onClick={() => { setMenuOpen(false); onBatchSelect(); }}>
+              Select transactions
+            </button>
+            <button type="button" className="sheet-row" role="menuitem" onClick={() => { setMenuOpen(false); onHistory(); }}>
+              Reconciliation history
+            </button>
+            <button type="button" className="sheet-row" role="menuitem" onClick={() => { setMenuOpen(false); onSettings(); }}>
+              Settings & backup
+            </button>
+          </div>
+        </div>
+      )}
 
       {!isEmpty && (
         <div className="filter-row">
@@ -143,6 +165,7 @@ export default function Register({ account, categories, onNewTransaction, onEdit
                       categoryName={categoryName.get(item.row.tx.categoryId)}
                       onToggleCleared={(tx) => toggleCleared(tx.id)}
                       onOpen={onEditTransaction}
+                      onLongPress={() => onBatchSelect()}
                       first={item.first}
                       last={item.last}
                     />
