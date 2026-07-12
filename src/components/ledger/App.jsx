@@ -14,6 +14,7 @@ import EntryForm from './views/EntryForm.jsx';
 import Reconcile from './views/Reconcile.jsx';
 import BatchSelect from './views/BatchSelect.jsx';
 import ReconcileHistory from './views/ReconcileHistory.jsx';
+import Settings from './views/Settings.jsx';
 import { PlusIcon } from './components/icons.jsx';
 
 // View state machine: `view.name` picks the screen, the rest carries context
@@ -94,6 +95,8 @@ export default function App() {
         />
       ) : view.name === 'history' ? (
         <ReconcileHistory account={account} onClose={() => setView({ name: 'register' })} />
+      ) : view.name === 'settings' ? (
+        <Settings accounts={accounts} categories={categories} onClose={() => setView({ name: 'register' })} />
       ) : (
         <Register
           account={account}
