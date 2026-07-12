@@ -1,0 +1,111 @@
+/* Checkbook Ledger design tokens — from Checkbook Ledger.dc.html mockups */
+
+.ledger-app {
+  --bg: #f4f5f8;
+  --surface: #ffffff;
+  --border: #e9ecf2;
+  --divider: #eef0f4;
+  --ink: #1b1f27;
+  --ink-2: #667085;
+  --ink-3: #98a2b3;
+  --ink-faint: #b9c1cd;
+  --accent: #2f5fbf;
+  --accent-tint: #ebf1fc;
+  --accent-tint-border: #c6d7f3;
+  --outstanding-bg: #f6f9ff;
+  --outstanding-border: #e3ebfa;
+  --outstanding-divider: #dce7fa;
+  --dashed-ring: #93a8cc;
+  --expense: #b42318;
+  --income: #067647;
+  --cleared-ink: #3a4252;
+  --transfer-ink: #475467;
+  --check-on-disc: #ffffff;
+  --reconcile-navy: #24457f;
+  --reconcile-navy-soft: #a9c0e8;
+  --reconcile-green: #0e5c3f;
+  --reconcile-green-soft: #a5d9c2;
+  --segmented-track: #e7eaf0;
+  --switch-off: #d3d9e3;
+  --icon-chip-bg: #eef1f6;
+  --fab-shadow: 0 8px 20px rgba(47, 95, 191, 0.4);
+  --button-shadow: 0 6px 16px rgba(47, 95, 191, 0.35);
+
+  font-family: 'Source Sans 3', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+@media (prefers-color-scheme: dark) {
+  .ledger-app {
+    --bg: #0e1116;
+    --surface: #171c24;
+    --border: #273040;
+    --divider: #222a36;
+    --ink: #f2f4f8;
+    --ink-2: #98a2b3;
+    --ink-3: #5f6b7c;
+    --ink-faint: #5f6b7c;
+    --accent: #7ea6f4;
+    --accent-tint: #1e2a40;
+    --accent-tint-border: #2f4568;
+    --outstanding-bg: #18202e;
+    --outstanding-border: #24334a;
+    --outstanding-divider: #24334a;
+    --dashed-ring: #4a5c7c;
+    --expense: #f97066;
+    --income: #3fcb8a;
+    --cleared-ink: #c6cdd8;
+    --transfer-ink: #98a2b3;
+    --check-on-disc: #0e1116;
+    --segmented-track: #232b37;
+    --switch-off: #37414f;
+    --icon-chip-bg: #232b37;
+    --fab-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+    --button-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  }
+}
+
+.ledger-app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.ledger-app *,
+.ledger-app *::before,
+.ledger-app *::after {
+  box-sizing: border-box;
+}
+
+.ledger-app .money {
+  font-variant-numeric: tabular-nums;
+}
+
+.ledger-app button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ledger-app button:focus-visible,
+.ledger-app input:focus-visible,
+.ledger-app [tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.ledger-app input {
+  font: inherit;
+  color: inherit;
+}

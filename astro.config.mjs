@@ -17,7 +17,8 @@ export default defineConfig({
       filter: (page) =>
         !page.includes('/admin') &&
         !page.includes('/thank-you') &&
-        !page.includes('/clients/'),
+        !page.includes('/clients/') &&
+        !page.includes('/ledger'),
     }),
     react(),
     AstroPWA({
