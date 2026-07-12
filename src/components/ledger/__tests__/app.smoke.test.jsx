@@ -62,4 +62,38 @@ describe('App smoke', () => {
     fireEvent.click(screen.getByRole('button', { name: /Target: outstanding/ }));
     await waitFor(() => expect(screen.getByText('Cleared · 2')).toBeTruthy());
   });
+
+  it('adds an uncleared expense through the form (acceptance #2)', async () => {
+    const acct = await createAccount({ name: 'Checking', startingBalance: 50000 });
+    await addTransaction({ accountId: acct.id, type: 'income', payee: 'Opening balance', amount: 0, cleared: true });
+
+    render(<App />);
+    await waitFor(() => screen.getByLabelText('Add transaction'));
+    fireEvent.click(screen.getByLabelText('Add transaction'));
+
+    await waitFor(() => screen.getByText('New Transaction'));
+    for (const digit of ['1', '1', '3', '7', '3']) {
+      fireEvent.click(screen.getByRole('button', { name: digit }));
+    }
+    fireEvent.change(screen.getByLabelText('Payee'), { target: { value: 'Target' } });
+    fireEvent.click(screen.getByText('Save transaction'));
+
+    // Back on the register: Outstanding −$113.73, Balance $386.27, Cleared $500.00
+    await waitFor(() => expect(screen.queryByText('New Transaction')).toBeNull());
+    await waitFor(() => expect(screen.getByText('Outstanding · 1')).toBeTruthy());
+    expect(screen.getAllByText('−$113.73').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('$386.27').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('$500.00').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('warns when editing a reconciled transaction', async () => {
+    const acct = await createAccount({ name: 'Checking', startingBalance: 50000 });
+    await addTransaction({ accountId: acct.id, type: 'expense', payee: 'Rent', amount: 145000, cleared: true, reconciled: true });
+
+    render(<App />);
+    await waitFor(() => screen.getByText('Rent'));
+    fireEvent.click(screen.getByText('Rent'));
+
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toMatch(/reconciled/));
+  });
 });

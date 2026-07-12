@@ -10,6 +10,7 @@ import { accountTotals } from './derive.js';
 import { centsFromDecimal } from './money.js';
 import Register from './views/Register.jsx';
 import AccountsSheet from './views/AccountsSheet.jsx';
+import EntryForm from './views/EntryForm.jsx';
 import { PlusIcon } from './components/icons.jsx';
 
 // View state machine: `view.name` picks the screen, the rest carries context
@@ -57,14 +58,29 @@ export default function App() {
   }, [accounts, allTxs]);
 
   const account = accounts?.find((a) => a.id === selectedId);
+  const editingTx = useLiveQuery(
+    () => (view.name === 'entry' && view.txId ? db.transactions.get(view.txId) : undefined),
+    [view.name, view.txId]
+  );
 
   if (!accounts) return <div className="ledger-app" aria-busy="true" />;
+
+  const showEntry = view.name === 'entry' && account && (!view.txId || editingTx);
 
   return (
     <div className="ledger-app">
       {accounts.length === 0 ? (
         <FirstRun />
-      ) : !account ? null : (
+      ) : !account ? null : showEntry ? (
+        <EntryForm
+          account={account}
+          accounts={accounts}
+          categories={categories}
+          editingTx={view.txId ? editingTx : null}
+          openingBalance={view.openingBalance}
+          onClose={() => setView({ name: 'register' })}
+        />
+      ) : (
         <Register
           account={account}
           categories={categories}
