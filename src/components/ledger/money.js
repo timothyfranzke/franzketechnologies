@@ -28,6 +28,16 @@ export function centsFromKeypad(digits) {
   return clean ? parseInt(clean, 10) : 0;
 }
 
+/** "1,234.5" / "$1234.50" / "-12" → integer cents. NaN-safe (returns null). */
+export function centsFromDecimal(input) {
+  const clean = String(input).replace(/[$,\s]/g, '');
+  if (!/^-?\d*(\.\d{0,2})?$/.test(clean) || clean === '' || clean === '-') return null;
+  const negative = clean.startsWith('-');
+  const [whole = '0', frac = ''] = clean.replace('-', '').split('.');
+  const cents = parseInt(whole, 10) * 100 + parseInt(frac.padEnd(2, '0') || '0', 10);
+  return negative ? -cents : cents;
+}
+
 /** "386.27" for CSV export (signed decimal string, no symbol). */
 export function decimalString(cents) {
   const sign = cents < 0 ? '-' : '';
