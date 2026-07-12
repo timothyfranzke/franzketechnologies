@@ -110,6 +110,23 @@ describe('recurring materialization', () => {
   });
 });
 
+describe('write atomicity (acceptance #6)', () => {
+  it('a transaction that dies mid-write leaves no partial state', async () => {
+    const acct = await createAccount({ name: 'Checking', startingBalance: 50000 });
+    const before = await db.transactions.count();
+
+    await expect(
+      db.transaction('rw', db.transactions, async () => {
+        await db.transactions.add({ id: 'partial-1', accountId: acct.id, type: 'expense', payee: 'A', amount: 100, date: '2026-07-12', cleared: false, reconciled: false, createdAt: 1, updatedAt: 1 });
+        throw new Error('force-kill');
+      })
+    ).rejects.toThrow('force-kill');
+
+    expect(await db.transactions.count()).toBe(before);
+    expect(await db.transactions.get('partial-1')).toBeUndefined();
+  });
+});
+
 describe('export / import', () => {
   async function seed() {
     const acct = await createAccount({ name: 'Checking', startingBalance: 50000 });
