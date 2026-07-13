@@ -527,6 +527,12 @@
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
 }
 
+/* Children must never flex-shrink: a too-tall form should scroll, not
+   compress the amount card under the keypad. */
+.entry-screen > * {
+  flex: 0 0 auto;
+}
+
 .entry-nav {
   padding: calc(env(safe-area-inset-top, 0px) + 10px) 16px 6px;
   display: flex;
