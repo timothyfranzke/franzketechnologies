@@ -31,6 +31,8 @@ flagRollup(account, txs, flagId) → { net, in, out, count }
 
 built on `signedAmount` so transfers count correctly from whichever register is viewing. Per-account in the register; a cross-account combined view is possible later because the function is pure.
 
+**Seed amounts (added post-design):** each flag carries a signed `seed` (integer cents, default 0) set directly by the user — "start Tim's bonus at $2,000" without a register transaction. Rollup net = seed + flagged inflow + outflow; account balances are never affected. Editable in the manage sheet and at creation; a seeded flag shows its chip even with zero transactions, and the drill-in header shows a Seed stat when nonzero.
+
 **Export/import:** JSON snapshot gains `flags`, `schemaVersion` bumps to 2; importer accepts v1 (flags default empty) and v2. CSV gains a `flag` column.
 
 ## Register UI
