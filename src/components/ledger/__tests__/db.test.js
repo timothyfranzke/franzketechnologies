@@ -130,7 +130,8 @@ describe('write atomicity (acceptance #6)', () => {
 describe('export / import', () => {
   async function seed() {
     const acct = await createAccount({ name: 'Checking', startingBalance: 50000 });
-    const tx = await addTransaction({ accountId: acct.id, type: 'expense', payee: 'Target', amount: 11373, cleared: true });
+    const flag = await db.flags.add({ id: crypto.randomUUID(), name: "Tim's bonus", color: 1, archived: false, createdAt: 1 });
+    const tx = await addTransaction({ accountId: acct.id, type: 'expense', payee: 'Target', amount: 11373, cleared: true, flagId: flag });
     await finishReconcile(acct.id, { statementDate: '2026-07-12', endingBalance: 38627 }, [tx.id]);
     return acct;
   }
@@ -139,13 +140,14 @@ describe('export / import', () => {
     await seed();
     const snapshot = await exportAll();
     expect(validateImport(snapshot)).toBeNull();
+    expect(snapshot.flags).toHaveLength(1);
 
     await db.delete();
     await db.open();
     await importReplace(snapshot);
 
     const after = await exportAll();
-    for (const table of ['accounts', 'categories', 'transactions', 'recurringRules', 'reconciliations']) {
+    for (const table of ['accounts', 'categories', 'transactions', 'recurringRules', 'reconciliations', 'flags']) {
       expect(after[table]).toEqual(snapshot[table]);
     }
   });

@@ -1,8 +1,12 @@
-import { formatCents } from '../money.js';
+import { formatCents, formatSigned } from '../money.js';
 import { ChevronDownIcon, SearchIcon } from './icons.jsx';
+import FlagDot from './FlagDot.jsx';
 
-/** The always-visible account header: Balance large, Cleared/Outstanding right. */
-export default function SummaryHeader({ account, totals, onAccountTap, onSearchTap, searchOpen, search, onSearch, menuSlot }) {
+/**
+ * The always-visible account header: Balance large, Cleared/Outstanding right.
+ * In flag mode (`flagSummary` set) it becomes Net large, In/Out right.
+ */
+export default function SummaryHeader({ account, totals, onAccountTap, onSearchTap, searchOpen, search, onSearch, menuSlot, flagSummary }) {
   const empty = totals.balance === 0 && totals.cleared === account.startingBalance && totals.outstanding === 0;
   return (
     <div className="reg-header">
@@ -20,24 +24,46 @@ export default function SummaryHeader({ account, totals, onAccountTap, onSearchT
           {menuSlot}
         </div>
       </div>
-      <div className="reg-balances">
-        <div>
-          <div className="stat-label">Balance</div>
-          <div className={`balance-big money${empty ? ' balance-big--zero' : ''}`}>{formatCents(totals.balance)}</div>
-        </div>
-        <div className="reg-substats">
+      {flagSummary ? (
+        <div className="reg-balances">
           <div>
-            <div className="stat-label stat-label--sub">Cleared</div>
-            <div className="stat-value money">{formatCents(totals.cleared)}</div>
+            <div className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <FlagDot color={flagSummary.color} />
+              {flagSummary.name}
+            </div>
+            <div className="balance-big money">{formatSigned(flagSummary.net)}</div>
           </div>
-          <div>
-            <div className="stat-label stat-label--sub">Outstanding</div>
-            <div className={`stat-value money${totals.outstanding !== 0 ? ' stat-value--dashed' : ''}`}>
-              {formatCents(totals.outstanding)}
+          <div className="reg-substats">
+            <div>
+              <div className="stat-label stat-label--sub">In</div>
+              <div className="stat-value money">{formatCents(flagSummary.inflow)}</div>
+            </div>
+            <div>
+              <div className="stat-label stat-label--sub">Out</div>
+              <div className="stat-value money">{formatCents(flagSummary.outflow)}</div>
             </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="reg-balances">
+          <div>
+            <div className="stat-label">Balance</div>
+            <div className={`balance-big money${empty ? ' balance-big--zero' : ''}`}>{formatCents(totals.balance)}</div>
+          </div>
+          <div className="reg-substats">
+            <div>
+              <div className="stat-label stat-label--sub">Cleared</div>
+              <div className="stat-value money">{formatCents(totals.cleared)}</div>
+            </div>
+            <div>
+              <div className="stat-label stat-label--sub">Outstanding</div>
+              <div className={`stat-value money${totals.outstanding !== 0 ? ' stat-value--dashed' : ''}`}>
+                {formatCents(totals.outstanding)}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {searchOpen && (
         <div className="reg-search">
           <input

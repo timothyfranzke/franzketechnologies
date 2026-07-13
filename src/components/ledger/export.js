@@ -7,9 +7,10 @@ function csvField(value) {
 }
 
 /** Spreadsheet-friendly CSV of one account's transactions, oldest first. */
-export function buildCsv(account, txs, categories) {
+export function buildCsv(account, txs, categories, flags) {
   const categoryName = new Map((categories ?? []).map((c) => [c.id, c.name]));
-  const header = 'date,payee,category,type,checkNum,memo,amount,cleared,reconciled';
+  const flagName = new Map((flags ?? []).map((f) => [f.id, f.name]));
+  const header = 'date,payee,category,flag,type,checkNum,memo,amount,cleared,reconciled';
   const rows = [...txs]
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.createdAt - b.createdAt))
     .map((tx) =>
@@ -17,6 +18,7 @@ export function buildCsv(account, txs, categories) {
         tx.date,
         csvField(tx.payee),
         csvField(categoryName.get(tx.categoryId) ?? ''),
+        csvField(flagName.get(tx.flagId) ?? ''),
         tx.type,
         csvField(tx.checkNum ?? ''),
         csvField(tx.memo ?? ''),

@@ -8,7 +8,9 @@ import {
   createRecurringRule,
   updateRecurringRule,
   registerQuery,
+  createFlag,
 } from '../db.js';
+import FlagDot, { FLAG_COLOR_COUNT, FLAG_COLOR_NAMES } from '../components/FlagDot.jsx';
 import { formatCents } from '../money.js';
 import { nextOccurrence, todayIso } from '../recurring.js';
 import { formatDateShort } from '../format.js';
@@ -39,6 +41,10 @@ export default function EntryForm({ account, accounts, categories, editingTx, op
   const [memo, setMemo] = useState(editingTx?.memo ?? '');
   const [cleared, setCleared] = useState(editingTx?.cleared ?? !!openingBalance);
   const [transferAccountId, setTransferAccountId] = useState(editingTx?.transferAccountId ?? null);
+  const [flagId, setFlagId] = useState(editingTx?.flagId ?? null);
+  const [newFlagName, setNewFlagName] = useState('');
+  const [newFlagColor, setNewFlagColor] = useState(0);
+  const [newFlagOpen, setNewFlagOpen] = useState(false);
   const [recurringOn, setRecurringOn] = useState(false);
   const [frequency, setFrequency] = useState('monthly');
   const [interval, setRuleInterval] = useState(1);
@@ -50,6 +56,16 @@ export default function EntryForm({ account, accounts, categories, editingTx, op
 
   const amount = digits ? parseInt(digits, 10) : 0;
   const txs = useLiveQuery(() => registerQuery(account.id), [account.id]);
+  const flags = useLiveQuery(() => db.flags.toArray(), []);
+  const selectedFlag = flags?.find((f) => f.id === flagId);
+
+  const addNewFlag = async () => {
+    const flag = await createFlag({ name: newFlagName.trim(), color: newFlagColor });
+    setFlagId(flag.id);
+    setNewFlagName('');
+    setNewFlagOpen(false);
+    setSheet(null);
+  };
 
   // Payee suggestions: frequency-ranked for this account; picking one carries
   // its most-used category along (unless the user already chose one).
@@ -109,6 +125,7 @@ export default function EntryForm({ account, accounts, categories, editingTx, op
       memo: memo.trim() || null,
       cleared,
       transferAccountId: isTransfer ? transferAccountId : null,
+      flagId,
     };
 
     if (isEdit) {
@@ -123,6 +140,7 @@ export default function EntryForm({ account, accounts, categories, editingTx, op
             memo: fields.memo,
             checkNum: fields.checkNum,
             transferAccountId: fields.transferAccountId,
+            flagId: fields.flagId,
           },
         });
       }
@@ -144,6 +162,7 @@ export default function EntryForm({ account, accounts, categories, editingTx, op
             memo: fields.memo,
             checkNum: fields.checkNum,
             transferAccountId: fields.transferAccountId,
+            flagId: fields.flagId,
           },
         });
       }
@@ -239,6 +258,17 @@ export default function EntryForm({ account, accounts, categories, editingTx, op
             </span>
           </button>
         )}
+
+        <button type="button" className="field-row" onClick={() => setSheet('flag')}>
+          <span className="field-label">Flag</span>
+          <span className={`field-value${selectedFlag ? '' : ' field-value--placeholder'}`}>
+            {selectedFlag && <FlagDot color={selectedFlag.color} />}
+            {selectedFlag?.name ?? 'Optional'}
+            <span className="field-chevron">
+              <ChevronRightIcon />
+            </span>
+          </span>
+        </button>
 
         <div className="field-row">
           <span className="field-label">Account</span>
@@ -346,6 +376,67 @@ export default function EntryForm({ account, accounts, categories, editingTx, op
                 {a.id === transferAccountId && <span style={{ color: 'var(--accent)' }}>✓</span>}
               </button>
             ))}
+        </PickerSheet>
+      )}
+
+      {sheet === 'flag' && (
+        <PickerSheet title="Flag" onClose={() => { setSheet(null); setNewFlagOpen(false); }}>
+          {(flags ?? [])
+            .filter((f) => !f.archived)
+            .map((f) => (
+              <button key={f.id} type="button" className="picker-option" onClick={() => { setFlagId(f.id); setSheet(null); }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <FlagDot color={f.color} />
+                  {f.name}
+                </span>
+                {f.id === flagId && <span style={{ color: 'var(--accent)' }}>✓</span>}
+              </button>
+            ))}
+          {(flags ?? []).some((f) => f.archived) && (
+            <>
+              <div className="picker-group-label">Archived</div>
+              {flags
+                .filter((f) => f.archived)
+                .map((f) => (
+                  <button key={f.id} type="button" className="picker-option" style={{ opacity: 0.6 }} onClick={() => { setFlagId(f.id); setSheet(null); }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <FlagDot color={f.color} />
+                      {f.name}
+                    </span>
+                    {f.id === flagId && <span style={{ color: 'var(--accent)' }}>✓</span>}
+                  </button>
+                ))}
+            </>
+          )}
+          {newFlagOpen ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
+              <input
+                className="text-input"
+                placeholder="Flag name (e.g. Tim's bonus)"
+                value={newFlagName}
+                onChange={(e) => setNewFlagName(e.target.value)}
+                autoFocus
+                aria-label="Flag name"
+              />
+              <div className="flag-swatches" role="radiogroup" aria-label="Flag color">
+                {Array.from({ length: FLAG_COLOR_COUNT }, (_, i) => (
+                  <button key={i} type="button" className="flag-swatch" aria-pressed={newFlagColor === i} aria-label={FLAG_COLOR_NAMES[i]} onClick={() => setNewFlagColor(i)}>
+                    <FlagDot color={i} />
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="btn-primary" disabled={!newFlagName.trim()} onClick={addNewFlag}>
+                Create flag
+              </button>
+            </div>
+          ) : (
+            <button type="button" className="btn-tint" style={{ width: '100%', marginTop: 12 }} onClick={() => setNewFlagOpen(true)}>
+              New flag…
+            </button>
+          )}
+          <button type="button" className="btn-tint" style={{ width: '100%', marginTop: 10 }} onClick={() => { setFlagId(null); setSheet(null); }}>
+            No flag
+          </button>
         </PickerSheet>
       )}
 

@@ -4,7 +4,7 @@ import React from 'react';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import App from '../App.jsx';
-import { db, createAccount, addTransaction } from '../db.js';
+import { db, createAccount, addTransaction, createFlag } from '../db.js';
 
 beforeEach(async () => {
   await db.delete();
@@ -145,5 +145,64 @@ describe('App smoke', () => {
     fireEvent.click(screen.getByText('Rent'));
 
     await waitFor(() => expect(screen.getByRole('alert').textContent).toMatch(/reconciled/));
+  });
+
+  it('creates a flag inside the entry form and saves it on the transaction', async () => {
+    const acct = await createAccount({ name: 'Checking', startingBalance: 50000 });
+    await addTransaction({ accountId: acct.id, type: 'income', payee: 'Opening balance', amount: 0, cleared: true });
+
+    render(<App />);
+    await waitFor(() => screen.getByLabelText('Add transaction'));
+    fireEvent.click(screen.getByLabelText('Add transaction'));
+    await waitFor(() => screen.getByText('New Transaction'));
+
+    for (const digit of ['2', '0', '0', '0', '0', '0']) {
+      fireEvent.click(screen.getByRole('button', { name: digit }));
+    }
+    fireEvent.change(screen.getByLabelText('Payee'), { target: { value: 'Bonus check' } });
+
+    fireEvent.click(screen.getByText('Flag'));
+    await waitFor(() => screen.getByText('New flag…'));
+    fireEvent.click(screen.getByText('New flag…'));
+    fireEvent.change(screen.getByLabelText('Flag name'), { target: { value: "Tim's bonus" } });
+    fireEvent.click(screen.getByText('Create flag'));
+
+    // picker closed, flag shown on the form row
+    await waitFor(() => expect(screen.getByText("Tim's bonus")).toBeTruthy());
+    fireEvent.click(screen.getByText('Save transaction'));
+    await waitFor(() => expect(screen.queryByText('New Transaction')).toBeNull());
+
+    const flags = await db.flags.toArray();
+    expect(flags).toHaveLength(1);
+    const tx = (await db.transactions.toArray()).find((t) => t.payee === 'Bonus check');
+    expect(tx.flagId).toBe(flags[0].id);
+    expect(tx.amount).toBe(200000);
+  });
+
+  it('flag chips roll up and filter the register', async () => {
+    const acct = await createAccount({ name: 'Checking', startingBalance: 50000 });
+    const flag = await createFlag({ name: "Tim's bonus", color: 1 });
+    await addTransaction({ accountId: acct.id, type: 'income', payee: 'Bonus check', amount: 200000, flagId: flag.id, cleared: true });
+    await addTransaction({ accountId: acct.id, type: 'expense', payee: 'Target', amount: 45000, flagId: flag.id });
+    await addTransaction({ accountId: acct.id, type: 'expense', payee: 'Shell', amount: 4820 });
+
+    render(<App />);
+
+    // chip shows the live net: +$2,000.00 − $450.00 = +$1,550.00
+    await waitFor(() => expect(screen.getByRole('button', { name: /Flag Tim's bonus, net \+\$1,550\.00/ })).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: /Flag Tim's bonus/ }));
+
+    // drill-in: header flips to In/Out, unflagged rows disappear
+    await waitFor(() => expect(screen.getByText('In')).toBeTruthy());
+    expect(screen.getByText('Out')).toBeTruthy();
+    expect(screen.getAllByText('$2,000.00').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('−$450.00').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText('Shell')).toBeNull();
+    expect(screen.getAllByText('Target').length).toBeGreaterThanOrEqual(1);
+
+    // tap again exits flag mode
+    fireEvent.click(screen.getByRole('button', { name: /Flag Tim's bonus/ }));
+    await waitFor(() => expect(screen.getByText('Shell')).toBeTruthy());
+    expect(screen.getByText('Balance')).toBeTruthy();
   });
 });

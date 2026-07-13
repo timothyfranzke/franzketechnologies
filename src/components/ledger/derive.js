@@ -60,3 +60,18 @@ export function reconcileDifference(endingBalance, reconciledBalance, checkedTxs
   for (const tx of checkedTxs) sum += signedAmount(tx, accountId);
   return endingBalance - (reconciledBalance + sum);
 }
+
+/** Rollup for one flag as seen from this account's register. */
+export function flagRollup(account, txs, flagId) {
+  let inflow = 0;
+  let outflow = 0;
+  let count = 0;
+  for (const tx of txs) {
+    if (tx.flagId !== flagId) continue;
+    const amt = signedAmount(tx, account.id);
+    if (amt >= 0) inflow += amt;
+    else outflow += amt;
+    count += 1;
+  }
+  return { net: inflow + outflow, inflow, outflow, count };
+}
