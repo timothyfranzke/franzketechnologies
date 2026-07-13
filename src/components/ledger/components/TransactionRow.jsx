@@ -3,13 +3,14 @@ import { formatCents, formatSigned } from '../money.js';
 import { signedAmount } from '../derive.js';
 import { formatDateShort } from '../format.js';
 import ClearedDisc from './ClearedDisc.jsx';
+import FlagDot from './FlagDot.jsx';
 import { TransferIcon } from './icons.jsx';
 
 /**
  * One register row. `first`/`last` shape the card corners; the parent supplies
  * the group palette via .grp-outstanding / .grp-cleared on a wrapper.
  */
-export default function TransactionRow({ tx, accountId, running, categoryName, onToggleCleared, onOpen, onLongPress, first, last }) {
+export default function TransactionRow({ tx, accountId, running, categoryName, flag, onToggleCleared, onOpen, onLongPress, first, last }) {
   const press = useRef({ timer: null, fired: false });
 
   const startPress = () => {
@@ -54,7 +55,15 @@ export default function TransactionRow({ tx, accountId, running, categoryName, o
       <ClearedDisc cleared={tx.cleared} payee={tx.payee} onToggle={() => onToggleCleared?.(tx)} />
       <div className="txrow-main">
         <div className="txrow-payee">{tx.payee}</div>
-        <div className="txrow-meta">{meta}</div>
+        <div className="txrow-meta">
+          {meta}
+          {flag && (
+            <>
+              {meta && ' · '}
+              <FlagDot color={flag.color} /> {flag.name}
+            </>
+          )}
+        </div>
       </div>
       <div className="txrow-amounts">
         <div className={`txrow-amount ${amountClass} money`}>

@@ -4,7 +4,7 @@ import React from 'react';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import App from '../App.jsx';
-import { db, createAccount, addTransaction } from '../db.js';
+import { db, createAccount, addTransaction, createFlag } from '../db.js';
 
 beforeEach(async () => {
   await db.delete();
@@ -177,5 +177,32 @@ describe('App smoke', () => {
     const tx = (await db.transactions.toArray()).find((t) => t.payee === 'Bonus check');
     expect(tx.flagId).toBe(flags[0].id);
     expect(tx.amount).toBe(200000);
+  });
+
+  it('flag chips roll up and filter the register', async () => {
+    const acct = await createAccount({ name: 'Checking', startingBalance: 50000 });
+    const flag = await createFlag({ name: "Tim's bonus", color: 1 });
+    await addTransaction({ accountId: acct.id, type: 'income', payee: 'Bonus check', amount: 200000, flagId: flag.id, cleared: true });
+    await addTransaction({ accountId: acct.id, type: 'expense', payee: 'Target', amount: 45000, flagId: flag.id });
+    await addTransaction({ accountId: acct.id, type: 'expense', payee: 'Shell', amount: 4820 });
+
+    render(<App />);
+
+    // chip shows the live net: +$2,000.00 − $450.00 = +$1,550.00
+    await waitFor(() => expect(screen.getByRole('button', { name: /Flag Tim's bonus, net \+\$1,550\.00/ })).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: /Flag Tim's bonus/ }));
+
+    // drill-in: header flips to In/Out, unflagged rows disappear
+    await waitFor(() => expect(screen.getByText('In')).toBeTruthy());
+    expect(screen.getByText('Out')).toBeTruthy();
+    expect(screen.getAllByText('$2,000.00').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('−$450.00').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText('Shell')).toBeNull();
+    expect(screen.getAllByText('Target').length).toBeGreaterThanOrEqual(1);
+
+    // tap again exits flag mode
+    fireEvent.click(screen.getByRole('button', { name: /Flag Tim's bonus/ }));
+    await waitFor(() => expect(screen.getByText('Shell')).toBeTruthy());
+    expect(screen.getByText('Balance')).toBeTruthy();
   });
 });

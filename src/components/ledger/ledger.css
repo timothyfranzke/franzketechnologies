@@ -1132,3 +1132,35 @@
   width: 20px;
   height: 20px;
 }
+
+/* Filter row scrolls horizontally once flag chips join it. */
+.filter-row {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.filter-row::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-row .month-label,
+.filter-row .chip {
+  flex: 0 0 auto;
+}
+
+.filter-row .month-label {
+  margin-right: 12px;
+}
+
+.chip--flag-active {
+  background: var(--accent-tint);
+  border-color: var(--accent-tint-border);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.txrow-meta .flag-dot {
+  width: 7px;
+  height: 7px;
+  margin: 0 2px;
+}
