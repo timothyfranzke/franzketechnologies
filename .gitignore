@@ -31,3 +31,6 @@ ui-debug.log
 
 # Local Netlify folder
 .netlify
+
+# Claude Code worktrees (local working copies, never commit)
+.claude/worktrees/
