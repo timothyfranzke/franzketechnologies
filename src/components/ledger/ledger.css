@@ -1080,3 +1080,55 @@
   border-radius: 14px;
   font-size: 16px;
 }
+
+/* ── Flags ───────────────────────────────────────────────────────────────── */
+
+.flag-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--flag-color, var(--accent));
+}
+
+.flag-dot--0 { --flag-color: #2f5fbf; }
+.flag-dot--1 { --flag-color: #067647; }
+.flag-dot--2 { --flag-color: #b54708; }
+.flag-dot--3 { --flag-color: #6941c6; }
+.flag-dot--4 { --flag-color: #c11574; }
+.flag-dot--5 { --flag-color: #0e7090; }
+
+@media (prefers-color-scheme: dark) {
+  .flag-dot--0 { --flag-color: #7ea6f4; }
+  .flag-dot--1 { --flag-color: #3fcb8a; }
+  .flag-dot--2 { --flag-color: #f7b267; }
+  .flag-dot--3 { --flag-color: #b49bf0; }
+  .flag-dot--4 { --flag-color: #f48fb8; }
+  .flag-dot--5 { --flag-color: #67d5e8; }
+}
+
+.flag-swatches {
+  display: flex;
+  gap: 12px;
+  padding: 4px 2px;
+}
+
+.flag-swatch {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid transparent;
+}
+
+.flag-swatch[aria-pressed='true'] {
+  border-color: var(--ink);
+}
+
+.flag-swatch .flag-dot {
+  width: 20px;
+  height: 20px;
+}
