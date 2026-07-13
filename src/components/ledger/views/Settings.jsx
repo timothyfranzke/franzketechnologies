@@ -36,10 +36,11 @@ export default function Settings({ accounts, categories, onClose }) {
 
   const exportCsv = async (account) => {
     const txs = await registerQuery(account.id);
+    const flags = await db.flags.toArray();
     const result = await shareOrDownload(
       `${account.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-transactions.csv`,
       'text/csv',
-      buildCsv(account, txs, categories)
+      buildCsv(account, txs, categories, flags)
     );
     if (result !== 'cancelled') setStatus(`CSV exported for ${account.name}.`);
   };

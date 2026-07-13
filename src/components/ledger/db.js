@@ -1,7 +1,7 @@
 import Dexie from 'dexie';
 import { dueInstances, todayIso } from './recurring.js';
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const db = new Dexie('ledger');
 
@@ -12,6 +12,13 @@ db.version(1).stores({
   reconciliations: 'id, accountId, statementDate',
   recurringRules: 'id, accountId',
   meta: 'key',
+});
+
+// v2: flags (rollup labels) + indexed flagId on transactions. Existing rows
+// read as unflagged; no data rewrite needed.
+db.version(2).stores({
+  flags: 'id, name',
+  transactions: 'id, accountId, [accountId+date], transferAccountId, date, ruleId, flagId',
 });
 
 const DEFAULT_CATEGORIES = [
@@ -91,6 +98,7 @@ export async function addTransaction(fields) {
     memo: null,
     transferAccountId: null,
     ruleId: null,
+    flagId: null,
     cleared: false,
     reconciled: false,
     date: todayIso(),
@@ -209,9 +217,33 @@ export function deleteRecurringRule(id) {
   return db.recurringRules.delete(id);
 }
 
+// ── Flags ───────────────────────────────────────────────────────────────────
+
+export async function createFlag({ name, color = 0 }) {
+  const flag = { id: crypto.randomUUID(), name, color, archived: false, createdAt: Date.now() };
+  await db.flags.add(flag);
+  return flag;
+}
+
+export function updateFlag(id, changes) {
+  return db.flags.update(id, changes);
+}
+
+/** Deletes the flag and reverts its transactions to unflagged — no data loss. */
+export function deleteFlagAndUnflag(id) {
+  return db.transaction('rw', db.flags, db.transactions, async () => {
+    await db.transactions.where('flagId').equals(id).modify({ flagId: null, updatedAt: Date.now() });
+    await db.flags.delete(id);
+  });
+}
+
+export function countFlagged(flagId) {
+  return db.transactions.where('flagId').equals(flagId).count();
+}
+
 // ── Export / import ─────────────────────────────────────────────────────────
 
-const DATA_TABLES = ['accounts', 'categories', 'transactions', 'recurringRules', 'reconciliations'];
+const DATA_TABLES = ['accounts', 'categories', 'transactions', 'recurringRules', 'reconciliations', 'flags'];
 
 export async function exportAll() {
   const snapshot = { schemaVersion: SCHEMA_VERSION, exportedAt: new Date().toISOString() };
@@ -219,10 +251,12 @@ export async function exportAll() {
   return snapshot;
 }
 
+/** v1 exports predate flags — they're accepted and read as flagless. */
 export function validateImport(data) {
   if (!data || typeof data !== 'object') return 'Not a valid export file.';
-  if (data.schemaVersion !== SCHEMA_VERSION) return `Unsupported schema version: ${data.schemaVersion}.`;
+  if (![1, SCHEMA_VERSION].includes(data.schemaVersion)) return `Unsupported schema version: ${data.schemaVersion}.`;
   for (const table of DATA_TABLES) {
+    if (table === 'flags' && data.schemaVersion === 1) continue;
     if (!Array.isArray(data[table])) return `Missing "${table}" data.`;
   }
   return null;
@@ -234,7 +268,7 @@ export function importReplace(data) {
   return db.transaction('rw', [...tables, db.meta], async () => {
     for (const table of DATA_TABLES) {
       await db[table].clear();
-      await db[table].bulkAdd(data[table]);
+      await db[table].bulkAdd(data[table] ?? []);
     }
   });
 }
@@ -246,7 +280,7 @@ export function importMerge(data) {
     const counts = {};
     for (const table of DATA_TABLES) {
       const existing = new Set(await db[table].toCollection().primaryKeys());
-      const fresh = data[table].filter((r) => !existing.has(r.id));
+      const fresh = (data[table] ?? []).filter((r) => !existing.has(r.id));
       await db[table].bulkAdd(fresh);
       counts[table] = fresh.length;
     }
