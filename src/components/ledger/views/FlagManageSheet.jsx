@@ -1,16 +1,20 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { updateFlag, deleteFlagAndUnflag, countFlagged } from '../db.js';
+import { centsFromDecimal, decimalString } from '../money.js';
 import FlagDot, { FLAG_COLOR_COUNT, FLAG_COLOR_NAMES } from '../components/FlagDot.jsx';
 
-/** Long-press a flag chip → rename, recolor, archive, or delete the flag. */
+/** Long-press a flag chip → rename, recolor, reseed, archive, or delete the flag. */
 export default function FlagManageSheet({ flag, onClose }) {
   const [name, setName] = useState(flag.name);
   const [color, setColor] = useState(flag.color);
+  const [seedText, setSeedText] = useState((flag.seed ?? 0) === 0 ? '' : decimalString(flag.seed));
   const [confirmDelete, setConfirmDelete] = useState(false);
   const txCount = useLiveQuery(() => countFlagged(flag.id), [flag.id]);
 
-  const dirty = name.trim() !== flag.name || color !== flag.color;
+  const seed = seedText.trim() === '' ? 0 : centsFromDecimal(seedText);
+  const seedValid = seed !== null;
+  const dirty = name.trim() !== flag.name || color !== flag.color || seed !== (flag.seed ?? 0);
 
   return (
     <div className="sheet-backdrop" onClick={onClose}>
@@ -28,12 +32,23 @@ export default function FlagManageSheet({ flag, onClose }) {
               </button>
             ))}
           </div>
+          <input
+            className="text-input money"
+            placeholder="Seed amount (e.g. 2000.00)"
+            inputMode="decimal"
+            value={seedText}
+            onChange={(e) => setSeedText(e.target.value)}
+            aria-label="Seed amount"
+          />
+          <div className="entry-hint" style={{ marginTop: -4, textAlign: 'left' }}>
+            The seed is added to this flag's total directly — no transaction, account balance untouched.
+          </div>
           <button
             type="button"
             className="btn-primary"
-            disabled={!dirty || !name.trim()}
+            disabled={!dirty || !name.trim() || !seedValid}
             onClick={async () => {
-              await updateFlag(flag.id, { name: name.trim(), color });
+              await updateFlag(flag.id, { name: name.trim(), color, seed });
               onClose();
             }}
           >

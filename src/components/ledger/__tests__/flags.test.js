@@ -30,15 +30,24 @@ describe('flagRollup', () => {
       { flagId: 'f2', type: 'expense', amount: 8000, accountId: 'A' },
       { flagId: null, type: 'expense', amount: 999, accountId: 'A' },
     ];
-    expect(flagRollup(account, txs, 'f1')).toEqual({ net: 155000, inflow: 200000, outflow: -45000, count: 2 });
-    expect(flagRollup(account, txs, 'f2')).toEqual({ net: -8000, inflow: 0, outflow: -8000, count: 1 });
-    expect(flagRollup(account, txs, 'missing')).toEqual({ net: 0, inflow: 0, outflow: 0, count: 0 });
+    expect(flagRollup(account, txs, { id: 'f1' })).toEqual({ net: 155000, inflow: 200000, outflow: -45000, seed: 0, count: 2 });
+    expect(flagRollup(account, txs, { id: 'f2' })).toEqual({ net: -8000, inflow: 0, outflow: -8000, seed: 0, count: 1 });
+    expect(flagRollup(account, txs, { id: 'missing' })).toEqual({ net: 0, inflow: 0, outflow: 0, seed: 0, count: 0 });
+  });
+
+  it('adds the seed to net without touching in/out', () => {
+    const account = { id: 'A', startingBalance: 0 };
+    const txs = [{ flagId: 'f1', type: 'expense', amount: 45000, accountId: 'A' }];
+    const r = flagRollup(account, txs, { id: 'f1', seed: 200000 });
+    expect(r).toEqual({ net: 155000, inflow: 0, outflow: -45000, seed: 200000, count: 1 });
+    // seed alone counts even with zero transactions
+    expect(flagRollup(account, [], { id: 'f2', seed: -5000 }).net).toBe(-5000);
   });
 
   it('signs transfers per viewing side', () => {
     const t = { flagId: 'f1', type: 'transfer', amount: 20000, accountId: 'A', transferAccountId: 'B' };
-    expect(flagRollup({ id: 'A' }, [t], 'f1').net).toBe(-20000);
-    expect(flagRollup({ id: 'B' }, [t], 'f1').net).toBe(20000);
+    expect(flagRollup({ id: 'A' }, [t], { id: 'f1' }).net).toBe(-20000);
+    expect(flagRollup({ id: 'B' }, [t], { id: 'f1' }).net).toBe(20000);
   });
 });
 

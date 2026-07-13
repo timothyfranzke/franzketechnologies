@@ -34,6 +34,12 @@ export default function SummaryHeader({ account, totals, onAccountTap, onSearchT
             <div className="balance-big money">{formatSigned(flagSummary.net)}</div>
           </div>
           <div className="reg-substats">
+            {(flagSummary.seed ?? 0) !== 0 && (
+              <div>
+                <div className="stat-label stat-label--sub">Seed</div>
+                <div className="stat-value money">{formatSigned(flagSummary.seed)}</div>
+              </div>
+            )}
             <div>
               <div className="stat-label stat-label--sub">In</div>
               <div className="stat-value money">{formatCents(flagSummary.inflow)}</div>

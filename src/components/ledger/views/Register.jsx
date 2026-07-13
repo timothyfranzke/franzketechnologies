@@ -41,13 +41,13 @@ export default function Register({ account, categories, onNewTransaction, onEdit
   // A deleted or archived flag silently drops out of flag mode.
   const activeFlag = activeFlagId ? (flags ?? []).find((f) => f.id === activeFlagId && !f.archived) : null;
 
-  // One rollup per non-archived flag with activity in this account.
+  // One rollup per non-archived flag with activity (or a seed) in this account.
   const flagChips = useMemo(() => {
     if (!txs || !flags) return [];
     return flags
       .filter((f) => !f.archived)
-      .map((f) => ({ flag: f, rollup: flagRollup(account, txs, f.id) }))
-      .filter(({ rollup }) => rollup.count > 0);
+      .map((f) => ({ flag: f, rollup: flagRollup(account, txs, f) }))
+      .filter(({ rollup }) => rollup.count > 0 || rollup.seed !== 0);
   }, [txs, flags, account]);
 
   const { totals, items, monthLabel, isEmpty } = useMemo(() => {

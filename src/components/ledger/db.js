@@ -219,8 +219,8 @@ export function deleteRecurringRule(id) {
 
 // ── Flags ───────────────────────────────────────────────────────────────────
 
-export async function createFlag({ name, color = 0 }) {
-  const flag = { id: crypto.randomUUID(), name, color, archived: false, createdAt: Date.now() };
+export async function createFlag({ name, color = 0, seed = 0 }) {
+  const flag = { id: crypto.randomUUID(), name, color, seed, archived: false, createdAt: Date.now() };
   await db.flags.add(flag);
   return flag;
 }

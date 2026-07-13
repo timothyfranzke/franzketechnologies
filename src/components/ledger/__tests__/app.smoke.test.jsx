@@ -205,4 +205,27 @@ describe('App smoke', () => {
     await waitFor(() => expect(screen.getByText('Shell')).toBeTruthy());
     expect(screen.getByText('Balance')).toBeTruthy();
   });
+
+  it('seeds a flag amount directly through the manage sheet', async () => {
+    const flag = await createFlag({ name: "Tim's bonus", color: 1 });
+    const onClose = () => {};
+    const { default: FlagManageSheet } = await import('../views/FlagManageSheet.jsx');
+
+    render(<FlagManageSheet flag={flag} onClose={onClose} />);
+    fireEvent.change(screen.getByLabelText('Seed amount'), { target: { value: '2000.00' } });
+    fireEvent.click(screen.getByText('Save changes'));
+
+    await waitFor(async () => {
+      expect((await db.flags.get(flag.id)).seed).toBe(200000);
+    });
+  });
+
+  it('shows a chip for a seeded flag with no transactions', async () => {
+    const acct = await createAccount({ name: 'Checking', startingBalance: 50000 });
+    await addTransaction({ accountId: acct.id, type: 'expense', payee: 'Shell', amount: 4820 });
+    await createFlag({ name: "Tim's bonus", color: 1, seed: 200000 });
+
+    render(<App />);
+    await waitFor(() => expect(screen.getByRole('button', { name: /Flag Tim's bonus, net \+\$2,000\.00/ })).toBeTruthy());
+  });
 });

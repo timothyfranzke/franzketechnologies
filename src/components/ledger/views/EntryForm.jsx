@@ -11,7 +11,7 @@ import {
   createFlag,
 } from '../db.js';
 import FlagDot, { FLAG_COLOR_COUNT, FLAG_COLOR_NAMES } from '../components/FlagDot.jsx';
-import { formatCents } from '../money.js';
+import { formatCents, centsFromDecimal } from '../money.js';
 import { nextOccurrence, todayIso } from '../recurring.js';
 import { formatDateShort } from '../format.js';
 import SegmentedType from '../components/SegmentedType.jsx';
@@ -44,6 +44,7 @@ export default function EntryForm({ account, accounts, categories, editingTx, op
   const [flagId, setFlagId] = useState(editingTx?.flagId ?? null);
   const [newFlagName, setNewFlagName] = useState('');
   const [newFlagColor, setNewFlagColor] = useState(0);
+  const [newFlagSeed, setNewFlagSeed] = useState('');
   const [newFlagOpen, setNewFlagOpen] = useState(false);
   const [recurringOn, setRecurringOn] = useState(false);
   const [frequency, setFrequency] = useState('monthly');
@@ -60,9 +61,14 @@ export default function EntryForm({ account, accounts, categories, editingTx, op
   const selectedFlag = flags?.find((f) => f.id === flagId);
 
   const addNewFlag = async () => {
-    const flag = await createFlag({ name: newFlagName.trim(), color: newFlagColor });
+    const flag = await createFlag({
+      name: newFlagName.trim(),
+      color: newFlagColor,
+      seed: centsFromDecimal(newFlagSeed || '0') ?? 0,
+    });
     setFlagId(flag.id);
     setNewFlagName('');
+    setNewFlagSeed('');
     setNewFlagOpen(false);
     setSheet(null);
   };
@@ -425,7 +431,20 @@ export default function EntryForm({ account, accounts, categories, editingTx, op
                   </button>
                 ))}
               </div>
-              <button type="button" className="btn-primary" disabled={!newFlagName.trim()} onClick={addNewFlag}>
+              <input
+                className="text-input money"
+                placeholder="Seed amount — optional (e.g. 2000.00)"
+                inputMode="decimal"
+                value={newFlagSeed}
+                onChange={(e) => setNewFlagSeed(e.target.value)}
+                aria-label="Seed amount"
+              />
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={!newFlagName.trim() || centsFromDecimal(newFlagSeed || '0') === null}
+                onClick={addNewFlag}
+              >
                 Create flag
               </button>
             </div>

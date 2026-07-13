@@ -61,17 +61,21 @@ export function reconcileDifference(endingBalance, reconciledBalance, checkedTxs
   return endingBalance - (reconciledBalance + sum);
 }
 
-/** Rollup for one flag as seen from this account's register. */
-export function flagRollup(account, txs, flagId) {
+/**
+ * Rollup for one flag as seen from this account's register. The flag's seed
+ * (a directly-set starting amount with no transaction behind it) is part of net.
+ */
+export function flagRollup(account, txs, flag) {
+  const seed = flag.seed ?? 0;
   let inflow = 0;
   let outflow = 0;
   let count = 0;
   for (const tx of txs) {
-    if (tx.flagId !== flagId) continue;
+    if (tx.flagId !== flag.id) continue;
     const amt = signedAmount(tx, account.id);
     if (amt >= 0) inflow += amt;
     else outflow += amt;
     count += 1;
   }
-  return { net: inflow + outflow, inflow, outflow, count };
+  return { net: seed + inflow + outflow, inflow, outflow, seed, count };
 }
