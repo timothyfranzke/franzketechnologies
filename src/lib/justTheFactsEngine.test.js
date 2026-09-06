@@ -85,14 +85,20 @@ describe("classify", () => {
     expect(classify(record({ attempts: 5, correct: 4, streak: 0, lastResult: "wrong" }))).toBe("struggling");
   });
 
-  it("struggling below 60% accuracy, slow at exactly 60%", () => {
-    expect(classify(record({ attempts: 5, correct: 2, lastResult: "fast" }))).toBe("struggling");
-    expect(classify(record({ attempts: 5, correct: 3, lastResult: "fast" }))).toBe("slow");
+  it("struggling below 60% accuracy, not at exactly 60%", () => {
+    expect(classify(record({ attempts: 5, correct: 2, lastResult: "fast", avgMs: 1000 }))).toBe("struggling");
+    expect(classify(record({ attempts: 5, correct: 3, lastResult: "fast", avgMs: 1000 }))).toBe("learning");
   });
 
-  it("slow with streak under 3, fast at 3", () => {
-    expect(classify(record({ attempts: 5, correct: 5, streak: 2, lastResult: "fast" }))).toBe("slow");
-    expect(classify(record({ attempts: 5, correct: 5, streak: 3, lastResult: "fast" }))).toBe("fast");
+  it("learning with a quick streak under 3, fast at 3", () => {
+    expect(classify(record({ attempts: 5, correct: 5, streak: 2, lastResult: "fast", avgMs: 1500 }))).toBe("learning");
+    expect(classify(record({ attempts: 5, correct: 5, streak: 3, lastResult: "fast", avgMs: 1500 }))).toBe("fast");
+  });
+
+  it("slow when the last answer was slow or the average is over the fast window", () => {
+    expect(classify(record({ attempts: 3, correct: 3, streak: 0, lastResult: "slow", avgMs: 2000 }))).toBe("slow");
+    expect(classify(record({ attempts: 3, correct: 3, streak: 1, lastResult: "fast", avgMs: FAST_MS + 1 }))).toBe("slow");
+    expect(classify(record({ attempts: 3, correct: 3, streak: 1, lastResult: "fast", avgMs: FAST_MS }))).toBe("learning");
   });
 });
 
@@ -187,7 +193,7 @@ describe("checkTyped", () => {
 
 describe("gradeAnswer", () => {
   it("grades by elapsed time and typed result", () => {
-    expect(gradeAnswer(2999, "match")).toBe("fast");
+    expect(gradeAnswer(FAST_MS - 1, "match")).toBe("fast");
     expect(gradeAnswer(FAST_MS, "match")).toBe("fast");
     expect(gradeAnswer(FAST_MS + 1, "match")).toBe("slow");
     expect(gradeAnswer(TIMEOUT_MS, "match")).toBe("wrong");
@@ -261,6 +267,16 @@ describe("countByClass", () => {
     expect(counts.fast).toBe(1);
     expect(counts.struggling).toBe(1);
     expect(counts.unseen).toBe(76);
-    expect(counts.fast + counts.struggling + counts.slow + counts.unseen).toBe(78);
+    expect(counts.fast + counts.struggling + counts.slow + counts.learning + counts.unseen).toBe(78);
+  });
+
+  it("separates learning from slow", () => {
+    const stats = statsWith({
+      "2×2": { attempts: 1, correct: 1, streak: 1, lastResult: "fast", avgMs: 1200 },
+      "2×3": { attempts: 1, correct: 1, streak: 0, lastResult: "slow", avgMs: 6000 },
+    });
+    const counts = countByClass(stats);
+    expect(counts.learning).toBe(1);
+    expect(counts.slow).toBe(1);
   });
 });

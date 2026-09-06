@@ -2,8 +2,8 @@
 // No DOM, no React, no storage. Every function takes stats in and returns
 // new values out; randomness is injected so tests can seed it.
 
-export const FAST_MS = 3000;
-export const TIMEOUT_MS = 6000;
+export const FAST_MS = 5000;
+export const TIMEOUT_MS = 10000;
 export const ROUND_SIZE = 20;
 export const DRILL_SIZE = 10;
 export const WRONG_HOLD_MS = 1200;
@@ -11,7 +11,7 @@ export const EMA_ALPHA = 0.3;
 export const FAST_STREAK = 3;
 export const STRUGGLING_RATE = 0.6;
 export const PREV_ROUND_DAMPING = 0.5;
-export const WEIGHTS = { struggling: 8, unseen: 5, slow: 3, fast: 1 };
+export const WEIGHTS = { struggling: 8, unseen: 5, slow: 3, learning: 2, fast: 1 };
 
 export const MIN_FACTOR = 1;
 export const MAX_FACTOR = 12;
@@ -62,7 +62,10 @@ export function classify(record) {
   if (record.lastResult === "wrong") return "struggling";
   if (record.correct / record.attempts < STRUGGLING_RATE) return "struggling";
   if (record.streak >= FAST_STREAK) return "fast";
-  return "slow";
+  // Correct but not yet proven: "slow" when the kid is actually taking too
+  // long, "learning" when answers are quick but the streak is still building.
+  if (record.lastResult === "slow" || (record.avgMs !== null && record.avgMs > FAST_MS)) return "slow";
+  return "learning";
 }
 
 export function weightFor(record, roundNumber) {
@@ -210,7 +213,7 @@ export function applyRound(stats, results, roundNumber) {
 }
 
 export function countByClass(stats) {
-  const counts = { unseen: 0, struggling: 0, slow: 0, fast: 0 };
+  const counts = { unseen: 0, struggling: 0, slow: 0, learning: 0, fast: 0 };
   for (const fact of ALL_FACTS) {
     counts[classify(getRecord(stats, fact.key))]++;
   }

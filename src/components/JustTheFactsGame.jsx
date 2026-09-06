@@ -196,6 +196,7 @@ const CLASS_META = {
   unseen: { label: "Unseen", glyph: "·", bg: "rgba(138,126,104,0.30)", fg: "var(--ink)" },
   struggling: { label: "Struggling", glyph: "○", bg: "var(--rust)", fg: "var(--paper)" },
   slow: { label: "Slow", glyph: "◐", bg: "var(--gold)", fg: "var(--ink)" },
+  learning: { label: "Learning", glyph: "◑", bg: "#9CCFC4", fg: "var(--ink)" },
   fast: { label: "Fast", glyph: "●", bg: "var(--teal)", fg: "var(--paper)" },
 };
 
@@ -257,7 +258,7 @@ function MasteryGrid({ stats, onSelect }) {
 function Legend() {
   return (
     <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px] font-mono uppercase tracking-wider" style={{ color: "var(--dusty)" }}>
-      {["unseen", "struggling", "slow", "fast"].map((cls) => (
+      {["unseen", "struggling", "slow", "learning", "fast"].map((cls) => (
         <span key={cls} className="flex items-center gap-1.5">
           <span
             className="inline-flex items-center justify-center w-4 h-4 rounded-[4px] text-[10px]"

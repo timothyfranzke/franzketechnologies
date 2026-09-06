@@ -87,12 +87,18 @@ Used by both the grid colors and the weighting.
 
 - `unseen` — no attempts
 - `struggling` — last answer was a miss, or correct rate under 60%
-- `slow` — correct but `avgMs` over 3000 ms, or `streak` under 3
 - `fast` — `streak` of 3 or more
+- `slow` — correct but the last answer was slow, or `avgMs` over the fast window
+- `learning` — correct and quick, but `streak` under 3 (not yet proven)
+
+_Revised 2026-09-05: `learning` was split out of `slow` after phone testing.
+A fact answered fast once showed as "Slow" on the grid, which read as a
+grading error. The fast window also moved from 3 to 5 seconds, and the
+timeout from 6 to 10 seconds, to suit reading plus two taps on a phone._
 
 ### Weighting and sampling
 
-Weights: struggling 8, unseen 5, slow 3, fast 1. Facts seen in the previous
+Weights: struggling 8, unseen 5, slow 3, learning 2, fast 1. Facts seen in the previous
 round have their weight halved so the same fact does not lead two rounds in a
 row. `sampleRound(stats, count, random)` draws `count` facts without
 replacement by weight. If fewer than `count` non-fast facts exist, the remainder
@@ -107,8 +113,8 @@ the only manual override.
 
 `gradeAnswer(fact, typed, elapsedMs)` returns `"fast"`, `"slow"`, or `"wrong"`.
 
-- The fast window is a constant `FAST_MS = 3000`.
-- Timeout at `TIMEOUT_MS = 6000` grades as `"wrong"` with no typed value.
+- The fast window is a constant `FAST_MS = 5000`.
+- Timeout at `TIMEOUT_MS = 10000` grades as `"wrong"` with no typed value.
 
 ### Round record and applying results
 
@@ -153,8 +159,8 @@ to correct._
 
 A bar shrinks over the fast window using a CSS transition restarted per fact.
 Elapsed time is measured in JS from fact display to final keystroke, not from
-the animation, so frame jitter cannot affect grading. Past 3 seconds the bar
-turns amber but the fact stays up. At 6 seconds it times out as wrong.
+the animation, so frame jitter cannot affect grading. Past 5 seconds the bar
+turns amber but the fact stays up. At 10 seconds it times out as wrong.
 
 ### Feedback
 
@@ -173,7 +179,8 @@ turns amber but the fact stays up. At 6 seconds it times out as wrong.
 Title "Just the Facts" in Fraunces, subtitle "Multiplication, 1 through 12",
 the 12×12 mastery grid, a count line ("41 of 78 facts fast"), a large Start
 button, and a sound toggle. Row and column headers 1–12. Cell colors: gray
-unseen, rust struggling, gold slow, green fast. Mirrored across the diagonal.
+unseen, rust struggling, gold slow, light teal learning, teal fast. Mirrored
+across the diagonal.
 
 ### Fact detail sheet
 
