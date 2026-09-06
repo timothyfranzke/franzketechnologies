@@ -15,7 +15,7 @@ no profiles, no mode menu.
 | Question | Decision |
 |---|---|
 | Scope | Focused core: one adaptive round mode plus progress grid |
-| Input | On-screen 0–9 keypad with auto-submit |
+| Input | On-screen 0–9 keypad; exact match advances, ✓ submits, backspace corrects |
 | Fact selection | Adaptive only, weighted sampling by weakness |
 | Round shape | 20 facts, ~3-second window per fact, total time reported |
 | On a miss | Flash the correct answer briefly, move on |
@@ -126,21 +126,28 @@ correct, fastCorrect, avgMs, lastRound, and streak for each fact.
 
 Portrait, phone or tablet. Top: "7 of 20" counter. Center: the fact large in
 Fraunces (`7 × 8`), the typed answer beneath in JetBrains Mono, a timer bar
-below that. Bottom third: a 3×4 keypad with 0–9, backspace, and one empty
-slot. No submit key.
+below that. Bottom third: a 3×4 keypad with 0–9, backspace, and a teal ✓
+submit key.
 
-### Auto-submit
+### Input and submit
 
-After each digit, compare the typed string to the answer:
+Digits only build the number (up to three digits, since 144 is the largest
+product). After each digit, compare the typed string to the answer:
 
-- Exact match → correct, advance.
-- Same length, different → wrong, flash the answer.
-- Shorter and a prefix of the answer → keep waiting.
-- Shorter and not a prefix (typed "6" for 56) → wrong immediately.
+- Exact match → correct, advance on its own. No extra tap for a right answer.
+- Anything else → stays on screen. The kid can backspace and fix it.
 
-The kid never presses Enter and every miss is caught as early as possible.
-Backspace exists for accidental taps, but a completed wrong number is graded
-wrong rather than allowing correction.
+The ✓ key (or Enter) submits whatever is typed as the final answer. Because a
+correct answer has already advanced, anything submitted with ✓ is graded as a
+miss and the answer flashes. An empty ✓ does nothing. The timeout still ends a
+fact the kid never resolves.
+
+Taps in the first 150 ms after a new fact appears are ignored, so a late tap on
+the previous fact cannot become a stray digit on the next one.
+
+_Revised 2026-09-05: the first cut graded a non-prefix digit wrong immediately,
+which made a single mistyped digit end the fact. Phone testing showed kids need
+to correct._
 
 ### Timer
 

@@ -110,6 +110,8 @@ const GlobalStyles = () => (
       font-size: 28px;
       min-height: 64px;
     }
+    .key-submit { background: var(--teal); color: var(--paper); }
+    .key-submit:hover { background: var(--teal-dark); }
 
     .timer-track { height: 10px; border: 2px solid var(--ink); border-radius: 999px; overflow: hidden; background: rgba(26,37,55,0.08); }
     .timer-fill {
@@ -381,7 +383,12 @@ const Stat = ({ label, value, tone = "ink" }) => (
 
 // ─── ROUND ───────────────────────────────────────────────────────────────
 
-const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", ""];
+const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "✓"];
+// Largest product is 144, so three digits is the most a kid can need.
+const MAX_DIGITS = 3;
+// Ignore taps that land in the first moments of a new fact so a late tap on the
+// previous fact cannot become a stray digit on this one.
+export const INPUT_GUARD_MS = 150;
 
 function Round({ facts, onFinish, onAbandon, sound }) {
   const [index, setIndex] = useState(0);
@@ -458,55 +465,61 @@ function Round({ facts, onFinish, onAbandon, sound }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index]);
 
+  // Digits only build the number. An exact match advances on its own; anything
+  // else stays on screen so the kid can backspace and fix it, or press ✓ to
+  // submit it as their answer.
   const handleDigit = useCallback(
     (d) => {
       if (phaseRef.current !== "answering") return;
+      const elapsed = performance.now() - startedAt.current;
+      if (elapsed < INPUT_GUARD_MS) return;
+      if (typedRef.current.length >= MAX_DIGITS) return;
       sound.click();
       const next = typedRef.current + d;
-      const result = checkTyped(fact.answer, next);
-      if (result === "prefix") {
-        typedRef.current = next;
-        setTyped(next);
-        return;
-      }
-      const elapsed = performance.now() - startedAt.current;
-      if (result === "match") {
-        const grade = gradeAnswer(elapsed, "match");
-        if (grade === "wrong") {
-          failFact(elapsed, next);
-          return;
-        }
-        typedRef.current = next;
-        setTyped(next);
-        record(grade, elapsed, next);
-        if (grade === "fast") sound.good();
-        else sound.slow();
-        setTick({ id: results.current.length, grade });
-        advance();
-        return;
-      }
       typedRef.current = next;
       setTyped(next);
-      failFact(elapsed, next);
+      if (checkTyped(fact.answer, next) !== "match") return;
+
+      const grade = gradeAnswer(elapsed, "match");
+      if (grade === "wrong") {
+        failFact(elapsed, next);
+        return;
+      }
+      record(grade, elapsed, next);
+      if (grade === "fast") sound.good();
+      else sound.slow();
+      setTick({ id: results.current.length, grade });
+      advance();
     },
     [fact, advance, failFact, record, sound]
   );
 
   const handleBackspace = useCallback(() => {
     if (phaseRef.current !== "answering") return;
+    if (!typedRef.current) return;
     sound.click();
     typedRef.current = typedRef.current.slice(0, -1);
     setTyped(typedRef.current);
   }, [sound]);
 
+  // ✓ submits whatever is typed. A correct answer already advanced on its own,
+  // so anything submitted here is graded as a miss.
+  const handleSubmit = useCallback(() => {
+    if (phaseRef.current !== "answering") return;
+    if (!typedRef.current) return;
+    sound.click();
+    failFact(performance.now() - startedAt.current, typedRef.current);
+  }, [failFact, sound]);
+
   useEffect(() => {
     const onKey = (e) => {
       if (e.key >= "0" && e.key <= "9") handleDigit(e.key);
       else if (e.key === "Backspace") handleBackspace();
+      else if (e.key === "Enter") handleSubmit();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [handleDigit, handleBackspace]);
+  }, [handleDigit, handleBackspace, handleSubmit]);
 
   const holding = phase === "wrongHold";
 
@@ -557,20 +570,20 @@ function Round({ facts, onFinish, onAbandon, sound }) {
       </div>
 
       <div className="grid grid-cols-3 gap-2.5 mt-6" role="group" aria-label="Number pad">
-        {KEYS.map((k, i) => {
-          if (k === "") return <div key={`blank${i}`} aria-hidden="true" />;
+        {KEYS.map((k) => {
           const isBack = k === "⌫";
+          const isSubmit = k === "✓";
           return (
             <button
               key={k}
               type="button"
-              className="btn key"
-              aria-label={isBack ? "Backspace" : k}
+              className={`btn key ${isSubmit ? "key-submit" : ""}`}
+              aria-label={isBack ? "Backspace" : isSubmit ? "Submit" : k}
               disabled={holding}
               style={holding ? { opacity: 0.6 } : undefined}
-              onPointerDown={(e) => {
-                e.preventDefault();
+              onClick={() => {
                 if (isBack) handleBackspace();
+                else if (isSubmit) handleSubmit();
                 else handleDigit(k);
               }}
             >
