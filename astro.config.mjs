@@ -18,7 +18,8 @@ export default defineConfig({
         !page.includes('/admin') &&
         !page.includes('/thank-you') &&
         !page.includes('/clients/') &&
-        !page.includes('/ledger'),
+        !page.includes('/ledger') &&
+        !page.includes('/snowflake-report'),
     }),
     react(),
     AstroPWA({
