@@ -48,7 +48,9 @@ const leaves = [1, 2, 3, 4, 5, 6];
       }
       h1 { font-size: 1.6rem; margin: 0 0 4px; }
       .hint { color: var(--muted); margin: 0 0 16px; font-size: 0.95rem; }
-      .toolbar { display: flex; gap: 10px; margin-bottom: 16px; }
+      .toolbar { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+      .toolbar .valign { display: flex; gap: 6px; align-items: center; margin: 0 0 0 auto; font-size: 0.9rem; color: var(--muted); }
+      .toolbar select { font: inherit; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: white; color: var(--ink); }
       button {
         font: inherit;
         padding: 8px 16px;
@@ -143,6 +145,13 @@ const leaves = [1, 2, 3, 4, 5, 6];
         <div class="toolbar">
           <button class="primary" id="print" type="button">Print</button>
           <button id="clear" type="button">Clear all</button>
+          <label class="valign">
+            Text position
+            <select id="valign">
+              <option value="middle">Middle</option>
+              <option value="top">Top</option>
+            </select>
+          </label>
         </div>
         <div class="cards">
           {leaves.map((n) => (
@@ -183,13 +192,19 @@ const leaves = [1, 2, 3, 4, 5, 6];
           cards.push(document.querySelector(`.card[data-leaf="${i}"]`));
         }
 
+        const valignSelect = document.getElementById('valign');
+        function applyValign() {
+          for (const l of leaves) l.setAttribute('valign', valignSelect.value);
+        }
+        valignSelect.addEventListener('change', () => { applyValign(); save(); });
+
         const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
         function renderLeaf(i) {
           const t = titles[i].value.trim();
           const b = bodies[i].value.trim();
           let html = '';
-          if (t) html += `<b>${esc(/[.!?:]$/.test(t) ? t : t + '.')}</b>`;
+          if (t) html += `<b>${esc(t)}</b>`;
           if (t && b) html += ' ';
           if (b) html += esc(b);
           leaves[i].innerHTML = html;
@@ -197,7 +212,10 @@ const leaves = [1, 2, 3, 4, 5, 6];
 
         function save() {
           try {
-            const data = { leaves: titles.map((t, i) => ({ title: t.value, body: bodies[i].value })) };
+            const data = {
+              leaves: titles.map((t, i) => ({ title: t.value, body: bodies[i].value })),
+              valign: valignSelect.value,
+            };
             localStorage.setItem(KEY, JSON.stringify(data));
           } catch {}
         }
@@ -205,11 +223,12 @@ const leaves = [1, 2, 3, 4, 5, 6];
         function load() {
           try {
             const data = JSON.parse(localStorage.getItem(KEY) || 'null');
-            if (!data || !Array.isArray(data.leaves)) return;
-            data.leaves.slice(0, N).forEach((l, i) => {
+            if (!data) return;
+            if (Array.isArray(data.leaves)) data.leaves.slice(0, N).forEach((l, i) => {
               titles[i].value = l.title || '';
               bodies[i].value = l.body || '';
             });
+            if (data.valign === 'top' || data.valign === 'middle') valignSelect.value = data.valign;
           } catch {}
         }
 
@@ -236,6 +255,7 @@ const leaves = [1, 2, 3, 4, 5, 6];
         });
 
         load();
+        applyValign();
         for (let i = 0; i < N; i++) renderLeaf(i);
       })();
     </script>
