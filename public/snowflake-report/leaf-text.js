@@ -153,18 +153,19 @@
       if (valign === "middle" && result.done && result.lines.length) {
         // Slide the starting line down until the gaps above and below the text block balance.
         const top = bb.y + pad, bot = bb.y + bb.height - pad;
-        const gapDiff = (r) => {
+        // Negative while the block sits high (more room below), positive once it sits low.
+        const imbalance = (r) => {
           const first = r.lines[0], last = r.lines[r.lines.length - 1];
-          return Math.abs((first.base - r.asc - top) - (bot - (last.base + r.desc)));
+          return (first.base - r.asc - top) - (bot - (last.base + r.desc));
         };
-        let best = result, bestDiff = gapDiff(result);
+        let best = result, bestDiff = Math.abs(imbalance(result));
         const stepY = result.size * 0.6;
         for (let off = stepY; off < bb.height; off += stepY) {
           const r = layout(result.size, off);
           if (!r.done || !r.lines.length) break;
-          const diff = gapDiff(r);
-          if (diff < bestDiff) { best = r; bestDiff = diff; }
-          else if (diff > bestDiff + stepY * 2) break; // past the balance point
+          const im = imbalance(r);
+          if (Math.abs(im) < bestDiff) { best = r; bestDiff = Math.abs(im); }
+          if (im > 0) break; // block is now below center; the best offset is behind us
         }
         result = best;
       }
