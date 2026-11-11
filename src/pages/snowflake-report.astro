@@ -77,6 +77,10 @@ const leaves = [1, 2, 3, 4, 5, 6];
         font-weight: 700;
       }
       .card .warn { color: var(--warn); font-weight: 400; font-size: 0.85rem; display: none; }
+      .card header .right { display: flex; align-items: center; gap: 10px; }
+      .sizer { display: flex; align-items: center; gap: 4px; font-weight: 400; font-size: 0.85rem; color: var(--muted); }
+      .sizer button { padding: 0 9px; line-height: 1.5; border-radius: 6px; font-size: 1rem; }
+      .sizer output { min-width: 2ch; text-align: center; color: var(--ink); font-variant-numeric: tabular-nums; }
       .card.overflow .warn { display: inline; }
       .card.overflow { border-color: var(--warn); }
       label { display: block; font-size: 0.85rem; color: var(--muted); margin: 6px 0 2px; }
@@ -161,7 +165,14 @@ const leaves = [1, 2, 3, 4, 5, 6];
             <div class="card" data-leaf={n}>
               <header>
                 <span>Leaf {n}</span>
-                <span class="warn">Too long, the text had to shrink. Trim it.</span>
+                <span class="right">
+                  <span class="warn">Too long, the text had to shrink. Trim it.</span>
+                  <span class="sizer" aria-label="Text size">
+                    <button type="button" data-size="-1" title="Smaller text" aria-label="Smaller text">&minus;</button>
+                    <output data-size-out={n}>12</output>
+                    <button type="button" data-size="1" title="Bigger text" aria-label="Bigger text">+</button>
+                  </span>
+                </span>
               </header>
               <label for={`title-${n}`}>Title (optional)</label>
               <input id={`title-${n}`} type="text" data-title={n} autocomplete="off" />
@@ -194,13 +205,22 @@ const leaves = [1, 2, 3, 4, 5, 6];
       (() => {
         const KEY = 'snowflake-report:v1';
         const N = 6;
-        const REQ_SIZE = 12;
+        const DEFAULT_SIZE = 12, MIN_SIZE = 8, MAX_SIZE = 24;
+        const sizes = Array(N).fill(DEFAULT_SIZE);
         const titles = [], bodies = [], leaves = [], cards = [];
         for (let i = 1; i <= N; i++) {
           titles.push(document.querySelector(`[data-title="${i}"]`));
           bodies.push(document.querySelector(`[data-body="${i}"]`));
           leaves.push(document.querySelector(`leaf-text[data-leaf="${i}"]`));
           cards.push(document.querySelector(`.card[data-leaf="${i}"]`));
+        }
+
+        function applySize(i) {
+          leaves[i].setAttribute('font-size', sizes[i]);
+          cards[i].querySelector('[data-size-out]').value = sizes[i];
+          const [minus, plus] = cards[i].querySelectorAll('.sizer button');
+          minus.disabled = sizes[i] <= MIN_SIZE;
+          plus.disabled = sizes[i] >= MAX_SIZE;
         }
 
         const valignSelect = document.getElementById('valign');
@@ -246,7 +266,7 @@ const leaves = [1, 2, 3, 4, 5, 6];
         function save() {
           try {
             const data = {
-              leaves: titles.map((t, i) => ({ title: t.value, body: bodyHtml(i) })),
+              leaves: titles.map((t, i) => ({ title: t.value, body: bodyHtml(i), size: sizes[i] })),
               valign: valignSelect.value,
               format: 'html',
             };
@@ -260,6 +280,8 @@ const leaves = [1, 2, 3, 4, 5, 6];
             if (!data) return;
             if (Array.isArray(data.leaves)) data.leaves.slice(0, N).forEach((l, i) => {
               titles[i].value = l.title || '';
+              const sz = parseInt(l.size, 10);
+              if (sz >= MIN_SIZE && sz <= MAX_SIZE) sizes[i] = sz;
               const body = l.body || '';
               // Older saves stored plain text; escape it and keep its line breaks.
               bodies[i].innerHTML = data.format === 'html' ? body : esc(body).replace(/\n/g, '<br>');
@@ -282,6 +304,13 @@ const leaves = [1, 2, 3, 4, 5, 6];
             else insert = esc(text).replace(/\r?\n/g, '<br>');
             document.execCommand('insertHTML', false, insert);
           });
+          cards[i].querySelectorAll('.sizer button').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              sizes[i] = Math.min(MAX_SIZE, Math.max(MIN_SIZE, sizes[i] + Number(btn.dataset.size)));
+              applySize(i);
+              save();
+            });
+          });
           cards[i].querySelectorAll('.fmt button').forEach((btn) => {
             btn.addEventListener('mousedown', (e) => e.preventDefault()); // keep the selection
             btn.addEventListener('click', () => {
@@ -295,8 +324,8 @@ const leaves = [1, 2, 3, 4, 5, 6];
           const lines = leaves[i].shadowRoot.querySelector('.lines');
           new MutationObserver(() => {
             const t = lines.querySelector('text');
-            const size = t ? parseFloat(t.getAttribute('font-size')) : REQ_SIZE;
-            const tooSmall = size < REQ_SIZE * 0.85;
+            const size = t ? parseFloat(t.getAttribute('font-size')) : sizes[i];
+            const tooSmall = size < sizes[i] * 0.85;
             cards[i].classList.toggle('overflow', tooSmall || leaves[i].hasAttribute('overflow'));
           }).observe(lines, { childList: true });
         }
@@ -304,14 +333,17 @@ const leaves = [1, 2, 3, 4, 5, 6];
         document.getElementById('print').addEventListener('click', () => window.print());
         document.getElementById('clear').addEventListener('click', () => {
           if (!confirm('Clear all six leaves? This cannot be undone.')) return;
-          for (let i = 0; i < N; i++) { titles[i].value = ''; bodies[i].innerHTML = ''; renderLeaf(i); }
+          for (let i = 0; i < N; i++) {
+            titles[i].value = ''; bodies[i].innerHTML = ''; sizes[i] = DEFAULT_SIZE;
+            applySize(i); renderLeaf(i);
+          }
           save();
         });
 
         try { document.execCommand('styleWithCSS', false, false); } catch {}
         load();
         applyValign();
-        for (let i = 0; i < N; i++) renderLeaf(i);
+        for (let i = 0; i < N; i++) { applySize(i); renderLeaf(i); }
       })();
     </script>
   </body>
