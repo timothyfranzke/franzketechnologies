@@ -49,7 +49,8 @@ const leaves = [1, 2, 3, 4, 5, 6];
       h1 { font-size: 1.6rem; margin: 0 0 4px; }
       .hint { color: var(--muted); margin: 0 0 16px; font-size: 0.95rem; }
       .toolbar { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
-      .toolbar .valign { display: flex; gap: 6px; align-items: center; margin: 0 0 0 auto; font-size: 0.9rem; color: var(--muted); }
+      .toolbar .valign { display: flex; gap: 6px; align-items: center; font-size: 0.9rem; color: var(--muted); }
+      .toolbar .valign:first-of-type { margin-left: auto; }
       .toolbar select { font: inherit; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: white; color: var(--ink); }
       button {
         font: inherit;
@@ -153,6 +154,14 @@ const leaves = [1, 2, 3, 4, 5, 6];
           <button class="primary" id="print" type="button">Print</button>
           <button id="clear" type="button">Clear all</button>
           <label class="valign">
+            Text direction
+            <select id="orient">
+              <option value="0">Across</option>
+              <option value="-90">Up the leaf</option>
+              <option value="90">Down the leaf</option>
+            </select>
+          </label>
+          <label class="valign">
             Text position
             <select id="valign">
               <option value="middle">Middle</option>
@@ -191,7 +200,7 @@ const leaves = [1, 2, 3, 4, 5, 6];
         </div>
       </section>
 
-      <section class="sheets" aria-label="Print preview">
+      <section class="sheets" id="sheets" aria-label="Print preview">
         {[0, 1, 2].map((s) => (
           <div class="sheet">
             <leaf-text font-size="12" outline fit="shrink" valign="middle" data-leaf={s * 2 + 1}></leaf-text>
@@ -222,6 +231,12 @@ const leaves = [1, 2, 3, 4, 5, 6];
           minus.disabled = sizes[i] <= MIN_SIZE;
           plus.disabled = sizes[i] >= MAX_SIZE;
         }
+
+        const orientSelect = document.getElementById('orient');
+        function applyOrient() {
+          for (const l of leaves) l.setAttribute('text-rotate', orientSelect.value);
+        }
+        orientSelect.addEventListener('change', () => { applyOrient(); save(); });
 
         const valignSelect = document.getElementById('valign');
         function applyValign() {
@@ -268,6 +283,7 @@ const leaves = [1, 2, 3, 4, 5, 6];
             const data = {
               leaves: titles.map((t, i) => ({ title: t.value, body: bodyHtml(i), size: sizes[i] })),
               valign: valignSelect.value,
+              orient: orientSelect.value,
               format: 'html',
             };
             localStorage.setItem(KEY, JSON.stringify(data));
@@ -287,6 +303,7 @@ const leaves = [1, 2, 3, 4, 5, 6];
               bodies[i].innerHTML = data.format === 'html' ? body : esc(body).replace(/\n/g, '<br>');
             });
             if (data.valign === 'top' || data.valign === 'middle') valignSelect.value = data.valign;
+            if (['0', '-90', '90'].includes(String(data.orient))) orientSelect.value = String(data.orient);
           } catch {}
         }
 
@@ -342,6 +359,7 @@ const leaves = [1, 2, 3, 4, 5, 6];
 
         try { document.execCommand('styleWithCSS', false, false); } catch {}
         load();
+        applyOrient();
         applyValign();
         for (let i = 0; i < N; i++) { applySize(i); renderLeaf(i); }
       })();

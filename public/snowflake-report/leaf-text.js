@@ -12,6 +12,9 @@
  *   fit          "shrink" (default) scales text down until it fits; "none" leaves it.
  *   path         override the shape with any SVG path "d" string.
  *   align        "center" (default) | "left" | "justify"
+ *   text-rotate  degrees to rotate the text inside the (upright) shape, e.g. -90 to
+ *                read bottom-to-top, 90 top-to-bottom. Only paths made of absolute
+ *                M/L/C/S/Q/T/Z commands support this. Default 0.
  *   valign       "top" (default) | "middle"  — centers the text block vertically.
  *
  * Inline <b>/<strong> render bold, <i>/<em> italic, <u> underlined. Sizes with CSS width.
@@ -20,10 +23,22 @@
 (() => {
   const LEAF = "M275.18 582.49 C234.63 561.62 215.95 551.84 213.29 539.45 C210.62 527.06 185.73 403.68 233.11 328.25 C280.50 252.82 308.47 231.76 308.47 231.76 C308.47 231.76 371.21 286.15 386.74 328.25 C402.26 370.36 438.42 465.72 409.51 539.45 C404.68 551.75 350.10 582.49 350.10 582.49 C350.10 582.49 315.73 603.36 275.18 582.49Z";
   const NS = "http://www.w3.org/2000/svg";
+  const rotatePath = (d, deg) => {
+    if (!deg || /[a-zHVA]/.test(d.replace(/[\d.\-+eE\s,]/g, ""))) return d;
+    const rad = deg * Math.PI / 180, cos = Math.cos(rad), sin = Math.sin(rad);
+    return d.replace(/([MLCSQT])([^A-Za-z]*)/g, (m, cmd, nums) => {
+      const v = nums.trim().split(/[\s,]+/).map(Number), out = [];
+      for (let i = 0; i + 1 < v.length; i += 2) {
+        const x = v[i], y = v[i + 1];
+        out.push((x * cos - y * sin).toFixed(2), (x * sin + y * cos).toFixed(2));
+      }
+      return cmd + out.join(" ");
+    });
+  };
   const measureCanvas = document.createElement("canvas").getContext("2d");
 
   class LeafText extends HTMLElement {
-    static get observedAttributes() { return ["font-size","font-family","padding","outline","fit","path","align","valign"]; }
+    static get observedAttributes() { return ["font-size","font-family","padding","outline","fit","path","align","valign","text-rotate"]; }
     constructor() {
       super();
       this.attachShadow({ mode: "open" }).innerHTML = `
@@ -33,10 +48,11 @@
           .outline{fill:none;stroke:var(--leaf-outline,currentColor);stroke-width:1;vector-effect:non-scaling-stroke;opacity:.6}
           text{fill:currentColor}
         </style>
-        <svg><path class="shape" fill="none" stroke="none"/><path class="outline" hidden/><g class="lines"></g></svg>`;
+        <svg><path class="shape" fill="none" stroke="none"/><g class="rot"><path class="outline" hidden/><g class="lines"></g></g></svg>`;
       this._svg = this.shadowRoot.querySelector("svg");
       this._shape = this.shadowRoot.querySelector(".shape");
       this._outline = this.shadowRoot.querySelector(".outline");
+      this._rot = this.shadowRoot.querySelector(".rot");
       this._lines = this.shadowRoot.querySelector(".lines");
       this._mo = new MutationObserver(() => this._schedule());
     }
@@ -73,7 +89,11 @@
     }
 
     _render() {
-      const d = this.getAttribute("path") || LEAF;
+      const upright = this.getAttribute("path") || LEAF;
+      const tRot = parseFloat(this.getAttribute("text-rotate")) || 0;
+      // Lay the text out horizontally inside the shape rotated the other way,
+      // then rotate the whole drawing back so the shape is upright and the text is turned.
+      const d = rotatePath(upright, -tRot);
       const family = this.getAttribute("font-family") || '"Source Sans 3", sans-serif';
       const pad = parseFloat(this.getAttribute("padding") ?? 6);
       const reqSize = parseFloat(this.getAttribute("font-size") ?? 12);
@@ -81,13 +101,16 @@
       const align = this.getAttribute("align") || "center";
       const valign = this.getAttribute("valign") || "top";
 
+      this._shape.setAttribute("d", upright);
+      const vb = this._shape.getBBox();
       this._shape.setAttribute("d", d);
       this._outline.setAttribute("d", d);
       this._outline.hidden = !this.hasAttribute("outline");
+      this._rot.setAttribute("transform", tRot ? `rotate(${tRot})` : "");
       const bb = this._shape.getBBox();
       if (!bb.width) return;
       const m = 2;
-      this._svg.setAttribute("viewBox", `${bb.x - m} ${bb.y - m} ${bb.width + 2*m} ${bb.height + 2*m}`);
+      this._svg.setAttribute("viewBox", `${vb.x - m} ${vb.y - m} ${vb.width + 2*m} ${vb.height + 2*m}`);
 
       const tokens = this._tokens();
       const inside = (x, y) => {
