@@ -14,7 +14,7 @@
  *   align        "center" (default) | "left" | "justify"
  *   valign       "top" (default) | "middle"  — centers the text block vertically.
  *
- * Inline <b>/<strong> children render bold. Sizes with CSS width.
+ * Inline <b>/<strong> render bold, <i>/<em> italic, <u> underlined. Sizes with CSS width.
  * The outline color can be overridden with the --leaf-outline custom property.
  */
 (() => {
@@ -54,18 +54,21 @@
 
     _tokens() {
       const out = [];
-      const walk = (node, bold) => {
+      const walk = (node, st) => {
         for (const n of node.childNodes) {
           if (n.nodeType === 3) {
-            for (const w of n.textContent.split(/\s+/)) if (w) out.push({ text: w, bold });
+            for (const w of n.textContent.split(/\s+/)) if (w) out.push({ text: w, ...st });
           } else if (n.nodeType === 1) {
-            const b = bold || /^(B|STRONG)$/.test(n.tagName);
-            if (n.tagName === "BR") out.push({ br: true });
-            else walk(n, b);
+            if (n.tagName === "BR") { out.push({ br: true }); continue; }
+            walk(n, {
+              bold: st.bold || /^(B|STRONG)$/.test(n.tagName),
+              italic: st.italic || /^(I|EM)$/.test(n.tagName),
+              underline: st.underline || n.tagName === "U",
+            });
           }
         }
       };
-      walk(this, false);
+      walk(this, { bold: false, italic: false, underline: false });
       return out;
     }
 
@@ -118,8 +121,8 @@
 
       const layout = (size, offset = 0) => {
         const lh = size * 1.25, asc = size * 0.8, desc = size * 0.25;
-        const font = (bold) => `${bold ? 700 : 400} ${size}px ${family}`;
-        const width = (t, bold) => { measureCanvas.font = font(bold); return measureCanvas.measureText(t).width; };
+        const font = (t) => `${t.italic ? "italic " : ""}${t.bold ? 700 : 400} ${size}px ${family}`;
+        const width = (text, t) => { measureCanvas.font = font(t); return measureCanvas.measureText(text).width; };
         const lines = []; let i = 0;
         for (let base = bb.y + pad + asc + offset; base + desc <= bb.y + bb.height - pad && i < tokens.length; base += lh) {
           const top = chordAt(base - asc), bot = chordAt(base + desc);
@@ -130,8 +133,8 @@
           while (i < tokens.length) {
             const t = tokens[i];
             if (t.br) { i++; break; }
-            const ww = width(t.text, t.bold);
-            const sp = line.words.length ? width(" ", t.bold) : 0;
+            const ww = width(t.text, t);
+            const sp = line.words.length ? width(" ", t) : 0;
             if (line.words.length && line.w + sp + ww > b - a) break;
             if (!line.words.length && ww > b - a) { line.words.push({ ...t, ww }); line.w = ww; i++; break; }
             line.words.push({ ...t, ww, sp }); line.w += sp + ww; i++;
@@ -185,6 +188,8 @@
         for (const w of L.words) {
           const ts = document.createElementNS(NS, "tspan");
           if (w.bold) ts.setAttribute("font-weight", "700");
+          if (w.italic) ts.setAttribute("font-style", "italic");
+          if (w.underline) ts.setAttribute("text-decoration", "underline");
           ts.textContent = (w.sp ? " " : "") + w.text;
           if (extra && w.sp) { ts.setAttribute("dx", extra.toFixed(2)); }
           text.appendChild(ts);

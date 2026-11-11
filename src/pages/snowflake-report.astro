@@ -80,7 +80,7 @@ const leaves = [1, 2, 3, 4, 5, 6];
       .card.overflow .warn { display: inline; }
       .card.overflow { border-color: var(--warn); }
       label { display: block; font-size: 0.85rem; color: var(--muted); margin: 6px 0 2px; }
-      input, textarea {
+      input, .body {
         font: inherit;
         width: 100%;
         border: 1px solid var(--line);
@@ -89,8 +89,11 @@ const leaves = [1, 2, 3, 4, 5, 6];
         background: var(--paper);
         color: var(--ink);
       }
-      textarea { min-height: 96px; resize: vertical; }
-      input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+      .body { min-height: 96px; white-space: pre-wrap; overflow-wrap: anywhere; }
+      input:focus, .body:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+      .fmt { display: flex; gap: 4px; margin: 0 0 4px; }
+      .fmt button { padding: 2px 10px; border-radius: 6px; font-size: 0.9rem; min-width: 32px; }
+      .label-row { display: flex; justify-content: space-between; align-items: flex-end; }
 
       .sheets { display: grid; gap: 24px; align-content: start; }
       .sheet {
@@ -160,10 +163,18 @@ const leaves = [1, 2, 3, 4, 5, 6];
                 <span>Leaf {n}</span>
                 <span class="warn">Too long, the text had to shrink. Trim it.</span>
               </header>
-              <label for={`title-${n}`}>Title</label>
+              <label for={`title-${n}`}>Title (optional)</label>
               <input id={`title-${n}`} type="text" data-title={n} autocomplete="off" />
-              <label for={`body-${n}`}>Paragraph</label>
-              <textarea id={`body-${n}`} data-body={n}></textarea>
+              <div class="label-row">
+                <label id={`body-label-${n}`}>Paragraph</label>
+                <div class="fmt" role="toolbar" aria-label="Formatting">
+                  <button type="button" data-cmd="bold" title="Bold"><b>B</b></button>
+                  <button type="button" data-cmd="italic" title="Italic"><i>I</i></button>
+                  <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
+                </div>
+              </div>
+              <div class="body" contenteditable="true" role="textbox" aria-multiline="true"
+                   aria-labelledby={`body-label-${n}`} data-body={n}></div>
             </div>
           ))}
         </div>
@@ -200,21 +211,44 @@ const leaves = [1, 2, 3, 4, 5, 6];
 
         const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
+        // Reduce whatever the editor (or a paste from a word processor) produced
+        // to the tags the leaf understands: b, i, u, br.
+        function clean(node) {
+          let out = '';
+          for (const n of node.childNodes) {
+            if (n.nodeType === 3) { out += esc(n.textContent); continue; }
+            if (n.nodeType !== 1) continue;
+            const tag = n.tagName;
+            if (tag === 'BR') { out += '<br>'; continue; }
+            if (/^(SCRIPT|STYLE|META|LINK)$/.test(tag)) continue;
+            const st = n.style || {};
+            let inner = clean(n);
+            if (/^(B|STRONG)$/.test(tag) || /^(bold|[6-9]00)$/.test(st.fontWeight)) inner = `<b>${inner}</b>`;
+            if (/^(I|EM)$/.test(tag) || st.fontStyle === 'italic') inner = `<i>${inner}</i>`;
+            if (tag === 'U' || /underline/.test(st.textDecoration)) inner = `<u>${inner}</u>`;
+            if (/^(DIV|P|LI|H[1-6])$/.test(tag) && out && !/<br>$/.test(out)) out += '<br>';
+            out += inner;
+          }
+          return out;
+        }
+        const bodyHtml = (i) => clean(bodies[i]).replace(/^(<br>)+|(<br>)+$/g, '');
+
         function renderLeaf(i) {
           const t = titles[i].value.trim();
-          const b = bodies[i].value.trim();
+          const b = bodyHtml(i);
           let html = '';
           if (t) html += `<b>${esc(t)}</b>`;
           if (t && b) html += ' ';
-          if (b) html += esc(b);
+          if (b) html += b;
           leaves[i].innerHTML = html;
         }
 
         function save() {
           try {
             const data = {
-              leaves: titles.map((t, i) => ({ title: t.value, body: bodies[i].value })),
+              leaves: titles.map((t, i) => ({ title: t.value, body: bodyHtml(i) })),
               valign: valignSelect.value,
+              format: 'html',
             };
             localStorage.setItem(KEY, JSON.stringify(data));
           } catch {}
@@ -226,7 +260,9 @@ const leaves = [1, 2, 3, 4, 5, 6];
             if (!data) return;
             if (Array.isArray(data.leaves)) data.leaves.slice(0, N).forEach((l, i) => {
               titles[i].value = l.title || '';
-              bodies[i].value = l.body || '';
+              const body = l.body || '';
+              // Older saves stored plain text; escape it and keep its line breaks.
+              bodies[i].innerHTML = data.format === 'html' ? body : esc(body).replace(/\n/g, '<br>');
             });
             if (data.valign === 'top' || data.valign === 'middle') valignSelect.value = data.valign;
           } catch {}
@@ -236,6 +272,24 @@ const leaves = [1, 2, 3, 4, 5, 6];
           const onInput = () => { renderLeaf(i); save(); };
           titles[i].addEventListener('input', onInput);
           bodies[i].addEventListener('input', onInput);
+          // Paste as plain text plus the formatting the leaf can show, nothing else.
+          bodies[i].addEventListener('paste', (e) => {
+            const html = e.clipboardData.getData('text/html');
+            const text = e.clipboardData.getData('text/plain');
+            e.preventDefault();
+            let insert;
+            if (html) { const tmp = document.createElement('div'); tmp.innerHTML = html; insert = clean(tmp); }
+            else insert = esc(text).replace(/\r?\n/g, '<br>');
+            document.execCommand('insertHTML', false, insert);
+          });
+          cards[i].querySelectorAll('.fmt button').forEach((btn) => {
+            btn.addEventListener('mousedown', (e) => e.preventDefault()); // keep the selection
+            btn.addEventListener('click', () => {
+              bodies[i].focus();
+              document.execCommand(btn.dataset.cmd, false, null);
+              onInput();
+            });
+          });
           // Flag the card when the component had to shrink the text noticeably
           // (below 85% of the requested size) or could not fit it at all.
           const lines = leaves[i].shadowRoot.querySelector('.lines');
@@ -250,10 +304,11 @@ const leaves = [1, 2, 3, 4, 5, 6];
         document.getElementById('print').addEventListener('click', () => window.print());
         document.getElementById('clear').addEventListener('click', () => {
           if (!confirm('Clear all six leaves? This cannot be undone.')) return;
-          for (let i = 0; i < N; i++) { titles[i].value = ''; bodies[i].value = ''; renderLeaf(i); }
+          for (let i = 0; i < N; i++) { titles[i].value = ''; bodies[i].innerHTML = ''; renderLeaf(i); }
           save();
         });
 
+        try { document.execCommand('styleWithCSS', false, false); } catch {}
         load();
         applyValign();
         for (let i = 0; i < N; i++) renderLeaf(i);
