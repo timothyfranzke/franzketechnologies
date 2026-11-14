@@ -11,7 +11,7 @@
  *   outline      show the shape outline. Default off; set outline="" to show.
  *   fit          "shrink" (default) scales text down until it fits; "none" leaves it.
  *   path         override the shape with any SVG path "d" string.
- *   align        "center" (default) | "left" | "justify"
+ *   align        "center" (default) | "left" | "right" | "justify"
  *   text-rotate  degrees to rotate the text inside the (upright) shape, e.g. -90 to
  *                read bottom-to-top, 90 top-to-bottom. Only paths made of absolute
  *                M/L/C/S/Q/T/Z commands support this. Default 0.
@@ -205,7 +205,7 @@
         text.setAttribute("font-family", family);
         const avail = L.b - L.a;
         const last = L === result.lines[result.lines.length - 1];
-        let x = align === "center" ? L.a + (avail - L.w) / 2 : L.a;
+        let x = align === "center" ? L.a + (avail - L.w) / 2 : align === "right" ? L.b - L.w : L.a;
         let extra = 0;
         if (align === "justify" && !last && L.words.length > 1) extra = (avail - L.w) / (L.words.length - 1);
         text.setAttribute("x", x.toFixed(2));

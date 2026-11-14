@@ -199,6 +199,15 @@ const leaves = [1, 2, 3, 4, 5, 6];
                     <option value="top">Top</option>
                   </select>
                 </label>
+                <label>
+                  Align
+                  <select data-align={n}>
+                    <option value="center">Center</option>
+                    <option value="left">Left</option>
+                    <option value="right">Right</option>
+                    <option value="justify">Justify</option>
+                  </select>
+                </label>
               </div>
             </div>
           ))}
@@ -237,19 +246,22 @@ const leaves = [1, 2, 3, 4, 5, 6];
           plus.disabled = sizes[i] >= MAX_SIZE;
         }
 
-        const orientSels = [], valignSels = [];
+        const orientSels = [], valignSels = [], alignSels = [];
         for (let i = 1; i <= N; i++) {
           orientSels.push(document.querySelector(`[data-orient="${i}"]`));
           valignSels.push(document.querySelector(`[data-valign="${i}"]`));
+          alignSels.push(document.querySelector(`[data-align="${i}"]`));
         }
         function applyOpts(i) {
           leaves[i].setAttribute('text-rotate', orientSels[i].value);
           leaves[i].setAttribute('valign', valignSels[i].value);
+          leaves[i].setAttribute('align', alignSels[i].value);
         }
         for (let i = 0; i < N; i++) {
           const onChange = () => { applyOpts(i); save(); };
           orientSels[i].addEventListener('change', onChange);
           valignSels[i].addEventListener('change', onChange);
+          alignSels[i].addEventListener('change', onChange);
         }
 
         const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
@@ -325,7 +337,7 @@ const leaves = [1, 2, 3, 4, 5, 6];
             const data = {
               leaves: titles.map((t, i) => ({
                 title: t.value, body: bodyHtml(i), size: sizes[i],
-                valign: valignSels[i].value, orient: orientSels[i].value,
+                valign: valignSels[i].value, orient: orientSels[i].value, align: alignSels[i].value,
               })),
               format: 'html',
             };
@@ -338,6 +350,7 @@ const leaves = [1, 2, 3, 4, 5, 6];
             const data = JSON.parse(localStorage.getItem(KEY) || 'null');
             if (!data) return;
             const VALIGNS = ['middle', 'top'], ORIENTS = ['0', '-90', '90'];
+            const ALIGNS = ['center', 'left', 'right', 'justify'];
             if (Array.isArray(data.leaves)) data.leaves.slice(0, N).forEach((l, i) => {
               titles[i].value = l.title || '';
               const sz = parseInt(l.size, 10);
@@ -349,6 +362,7 @@ const leaves = [1, 2, 3, 4, 5, 6];
               const va = l.valign ?? data.valign, or = String(l.orient ?? data.orient);
               if (VALIGNS.includes(va)) valignSels[i].value = va;
               if (ORIENTS.includes(or)) orientSels[i].value = or;
+              if (ALIGNS.includes(l.align)) alignSels[i].value = l.align;
             });
           } catch {}
         }
@@ -398,7 +412,7 @@ const leaves = [1, 2, 3, 4, 5, 6];
           if (!confirm('Clear all six leaves? This cannot be undone.')) return;
           for (let i = 0; i < N; i++) {
             titles[i].value = ''; bodies[i].innerHTML = ''; sizes[i] = DEFAULT_SIZE;
-            valignSels[i].value = 'middle'; orientSels[i].value = '0';
+            valignSels[i].value = 'middle'; orientSels[i].value = '0'; alignSels[i].value = 'center';
             applyOpts(i); applySize(i); renderLeaf(i);
           }
           save();
