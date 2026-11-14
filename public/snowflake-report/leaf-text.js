@@ -73,7 +73,8 @@
       const walk = (node, st) => {
         for (const n of node.childNodes) {
           if (n.nodeType === 3) {
-            for (const w of n.textContent.split(/\s+/)) if (w) out.push({ text: w, ...st });
+            // Split on ordinary whitespace only; a non-breaking space keeps words together.
+            for (const w of n.textContent.split(/[^\S\u00a0]+/)) if (w) out.push({ text: w, ...st });
           } else if (n.nodeType === 1) {
             if (n.tagName === "BR") { out.push({ br: true }); continue; }
             walk(n, {

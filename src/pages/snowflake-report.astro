@@ -95,6 +95,7 @@ const leaves = [1, 2, 3, 4, 5, 6];
         color: var(--ink);
       }
       .body { min-height: 96px; white-space: pre-wrap; overflow-wrap: anywhere; }
+      .body ul, .body ol { margin: 4px 0; padding-left: 1.5em; }
       input:focus, .body:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
       .fmt { display: flex; gap: 4px; margin: 0 0 4px; }
       .fmt button { padding: 2px 10px; border-radius: 6px; font-size: 0.9rem; min-width: 32px; }
@@ -176,6 +177,8 @@ const leaves = [1, 2, 3, 4, 5, 6];
                   <button type="button" data-cmd="bold" title="Bold"><b>B</b></button>
                   <button type="button" data-cmd="italic" title="Italic"><i>I</i></button>
                   <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
+                  <button type="button" data-cmd="insertUnorderedList" title="Bulleted list" aria-label="Bulleted list">&bull; List</button>
+                  <button type="button" data-cmd="insertOrderedList" title="Numbered list" aria-label="Numbered list">1. List</button>
                 </div>
               </div>
               <div class="body" contenteditable="true" role="textbox" aria-multiline="true"
@@ -252,7 +255,8 @@ const leaves = [1, 2, 3, 4, 5, 6];
         const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
         // Reduce whatever the editor (or a paste from a word processor) produced
-        // to the tags the leaf understands: b, i, u, br.
+        // to b, i, u, br, and ul/ol/li lists. Lists stay as lists so they remain
+        // editable; they are flattened to marked lines only when drawn in the leaf.
         function clean(node) {
           let out = '';
           for (const n of node.childNodes) {
@@ -261,6 +265,12 @@ const leaves = [1, 2, 3, 4, 5, 6];
             const tag = n.tagName;
             if (tag === 'BR') { out += '<br>'; continue; }
             if (/^(SCRIPT|STYLE|META|LINK)$/.test(tag)) continue;
+            if (/^(UL|OL)$/.test(tag)) {
+              const items = [...n.children].filter((c) => c.tagName === 'LI')
+                .map((li) => `<li>${clean(li).replace(/^(<br>)+|(<br>)+$/g, '')}</li>`).join('');
+              if (items) out += `<${tag.toLowerCase()}>${items}</${tag.toLowerCase()}>`;
+              continue;
+            }
             const st = n.style || {};
             let inner = clean(n);
             if (/^(B|STRONG)$/.test(tag) || /^(bold|[6-9]00)$/.test(st.fontWeight)) inner = `<b>${inner}</b>`;
@@ -273,12 +283,39 @@ const leaves = [1, 2, 3, 4, 5, 6];
         }
         const bodyHtml = (i) => clean(bodies[i]).replace(/^(<br>)+|(<br>)+$/g, '');
 
+        // Flatten lists into one line per item: "•&nbsp;text" or "1.&nbsp;text".
+        // The non-breaking space keeps the marker on the same line as its first word.
+        function flattenLists(node) {
+          let out = '';
+          const isList = (n) => n.nodeType === 1 && /^(UL|OL)$/.test(n.tagName);
+          for (const n of node.childNodes) {
+            if (isList(n)) {
+              let k = 0;
+              for (const li of n.children) {
+                if (li.tagName !== 'LI') continue;
+                k++;
+                const marker = n.tagName === 'OL' ? `${k}.` : '\u2022';
+                const inner = flattenLists(li).replace(/^(<br>)+|(<br>)+$/g, '');
+                if (out && !/<br>$/.test(out)) out += '<br>';
+                out += `${marker}\u00a0${inner}`;
+              }
+              out += '<br>';
+            } else if (n.nodeType === 3) out += esc(n.textContent);
+            else if (n.nodeType === 1 && n.tagName === 'BR') out += '<br>';
+            else if (n.nodeType === 1) out += `<${n.tagName.toLowerCase()}>${flattenLists(n)}</${n.tagName.toLowerCase()}>`;
+          }
+          return out;
+        }
+
         function renderLeaf(i) {
           const t = titles[i].value.trim();
-          const b = bodyHtml(i);
+          const tmp = document.createElement('div');
+          tmp.innerHTML = bodyHtml(i);
+          const b = flattenLists(tmp).replace(/^(<br>)+|(<br>)+$/g, '');
+          const startsWithList = [...tmp.childNodes].find((n) => n.nodeType !== 3 || n.textContent.trim())?.tagName;
           let html = '';
           if (t) html += `<b>${esc(t)}</b>`;
-          if (t && b) html += ' ';
+          if (t && b) html += /^(UL|OL)$/.test(startsWithList) ? '<br>' : ' ';
           if (b) html += b;
           leaves[i].innerHTML = html;
         }
